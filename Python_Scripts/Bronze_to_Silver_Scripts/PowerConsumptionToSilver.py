@@ -1,39 +1,63 @@
-import duckdb
+import pandas as pd
 import os
 
-con = duckdb.connect()
-con.execute("INSTALL httpfs;")
-con.execute("LOAD httpfs;")
-con.execute("SET s3_endpoint = 'storage.googleapis.com';")
-con.execute(f"SET s3_access_key_id = '{os.environ['HMAC_ACCESS_KEY']}';")
-con.execute(f"SET s3_secret_access_key = '{os.environ['HMAC_SECRET_KEY']}';")
+# Configuration for GCS via S3-interoperability
+storage_options = {
+    "key": os.environ['HMAC_ACCESS_KEY'],
+    "secret": os.environ['HMAC_SECRET_KEY'],
+    "client_kwargs": {'endpoint_url': 'https://storage.googleapis.com'}
+}
 
 bronze_base = "s3://data-cycle-lake/raw/bellevueconso/powerconsumption"
 silver_base = "s3://data-cycle-lake/processed/cleanbellevueconso/cleanpowerconsumption"
 
 for month in range(1, 13):
     month_str = str(month).zfill(2)
+    bronze_path = f"{bronze_base}/{month_str}/*.csv"
+    silver_path = f"{silver_base}/{month_str}/data.parquet"
 
-    con.execute(f"""
-        COPY (
-            SELECT
-                STRPTIME(Date, '%d.%m.%Y')::DATE           AS date,
-                Heure::TIME                                 AS time,
-                TRIM("Unité affichage")                     AS unit,
-                TRY_CAST("Valeur Acquisition" AS DECIMAL)   AS value_acquired,
-                TRY_CAST(Variation AS DECIMAL)              AS variation
-            FROM read_csv_auto(
-                '{bronze_base}/{month_str}/*.csv',
-                delim=';',
-                header=true
-            )
-            WHERE date IS NOT NULL
-              AND value_acquired IS NOT NULL
-              AND MONTH(STRPTIME(Date, '%d.%m.%Y')) = {month}
+    try:
+        # 1. Read Raw Data (Using glob pattern support in modern pandas/fsspec)
+        df = pd.read_csv(
+            bronze_path, 
+            sep=';', 
+            storage_options=storage_options,
+            on_bad_lines='skip'
         )
-        TO '{silver_base}/{month_str}/'
-        (FORMAT PARQUET, COMPRESSION SNAPPY)
-    """)
-    print(f"Month {month_str} done.")
 
-print("All months written to silver.")
+        # 2. Transform & Clean (Silver Layer)
+        # Convert Date
+        df['date'] = pd.to_datetime(df['Date'], format='%d.%m.%Y', errors='coerce').dt.date
+        
+        # Convert Time
+        df['time'] = pd.to_datetime(df['Heure'], format='%H:%M:%S', errors='coerce').dt.time
+        
+        # Clean Unit and Cast Values
+        df['unit'] = df['Unité affichage'].str.strip()
+        df['value_acquired'] = pd.to_numeric(df['Valeur Acquisition'], errors='coerce')
+        df['variation'] = pd.to_numeric(df['Variation'], errors='coerce')
+
+        # Filter: Remove nulls and ensure month matches (as per your DuckDB logic)
+        df = df[df['date'].notna() & df['value_acquired'].notna()]
+        df = df[pd.to_datetime(df['date']).dt.month == month]
+
+        # Select only the cleaned columns
+        final_df = df[['date', 'time', 'unit', 'value_acquired', 'variation']]
+
+        # 3. Write to Parquet
+        if not final_df.empty:
+            final_df.to_parquet(
+                silver_path,
+                storage_options=storage_options,
+                engine='pyarrow',
+                compression='snappy',
+                index=False
+            )
+            print(f"Month {month_str} processed and uploaded.")
+        else:
+            print(f"Month {month_str} skipped (no valid data).")
+
+    except Exception as e:
+        print(f"Error processing month {month_str}: {e}")
+
+print("Medallion Silver layer update complete.")
