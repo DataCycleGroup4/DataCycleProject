@@ -1,7 +1,6 @@
 import pandas as pd
 import os
 import gcsfs
-import logging
 
 # Configuration
 SERVICE_ACCOUNT_KEY = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
@@ -95,7 +94,7 @@ for month in range(1, 13):
             )
             print(f"Month {month_str}: Successfully written as daily partitions.")
         else:
-            printf"Month {month_str}: No valid data.")
+            print(f"Month {month_str}: No valid data.")
 
     except Exception as e:
         print(f"Failed to process Month {month_str}: {e}")
