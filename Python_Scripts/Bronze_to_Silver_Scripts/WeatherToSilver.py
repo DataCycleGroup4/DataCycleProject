@@ -7,14 +7,14 @@ import logging
 SERVICE_ACCOUNT_KEY = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
 BUCKET = "data-cycle-lake"  
 BRONZE_BASE = f"gs://{BUCKET}/raw/bellevueconso/weather"
-SILVER_BASE = f"gs://{BUCKET}/processed/cleanbellevueconso/cleanweather"   
+SILVER_BASE = f"gs://{BUCKET}/processed/cleanweather"   
 
 # Initialize GCS
 try:
     fs = gcsfs.GCSFileSystem(token=SERVICE_ACCOUNT_KEY)
-    logging.info("Authenticated successfully.")
+    print("Authenticated successfully.")
 except Exception as e:
-    logging.critical(f"Auth failed: {e}")
+    print(f"Auth failed: {e}")
     exit()
 
 for month in range(1, 13):
