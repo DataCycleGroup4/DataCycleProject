@@ -24,7 +24,7 @@ for month in range(1, 13):
     try:
         files = fs.glob(bronze_glob)
         if not files:
-            logging.info(f"Month {month_str}: No files found.")
+            print(f"Month {month_str}: No files found.")
             continue
 
         df_list = []
@@ -43,7 +43,7 @@ for month in range(1, 13):
                 if not chunk.empty:
                     df_list.append(chunk)
             except Exception as read_e:
-                logging.warning(f"Skipping file {f}: {read_e}")
+                print(f"Skipping file {f}: {read_e}")
         
         if not df_list:
             continue
@@ -93,11 +93,11 @@ for month in range(1, 13):
                 partition_cols=['date_partition'],
                 storage_options={"token": SERVICE_ACCOUNT_KEY}
             )
-            logging.info(f"Month {month_str}: Successfully written as daily partitions.")
+            print(f"Month {month_str}: Successfully written as daily partitions.")
         else:
-            logging.info(f"Month {month_str}: No valid data.")
+            printf"Month {month_str}: No valid data.")
 
     except Exception as e:
-        logging.error(f"Failed to process Month {month_str}: {e}")
+        print(f"Failed to process Month {month_str}: {e}")
         
-logging.info("--- Silver Layer Processing Complete ---")
+print("--- Silver Layer Processing Complete ---")
