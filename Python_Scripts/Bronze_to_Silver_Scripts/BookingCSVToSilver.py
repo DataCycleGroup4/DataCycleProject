@@ -6,7 +6,7 @@ import os
 SERVICE_ACCOUNT_KEY = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
 
 BUCKET = "data-cycle-lake"
-BRONZE_BASE = f"gs://{BUCKET}/raw/bellevuebooking"
+BRONZE_BASE = f"gs://{BUCKET}/raw/bellevuebooking/csv"
 SILVER_BASE = f"gs://{BUCKET}/processed/cleanbellevuebooking"
 
 # Mapping French months to English for Python's datetime parser
@@ -32,7 +32,10 @@ for month in range(1, 13):
         # Find all files for the current month
         files = fs.glob(bronze_glob)
         if not files:
+            print(f"  ! No files found in {bronze_glob}. Skipping.")
             continue
+        
+        print(f"  + Found {len(files)} files. Starting ingestion...")
 
         df_list = []
         for f in files:
