@@ -5,8 +5,10 @@ import gcsfs
 # 1. Configuration
 SERVICE_ACCOUNT_KEY = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
 BUCKET = "data-cycle-lake"
-BRONZE_BASE = f"gs://{BUCKET}/raw/bellevueconso/powerconsumption"
-SILVER_BASE = f"gs://{BUCKET}/processed/cleanbellevueconso/cleanpowerconsumption"
+BRONZE_BASE = f"gs://{BUCKET}/raw/bellevueconso/solarlogs"
+SILVER_BASE_HISTORY = f"gs://{BUCKET}/processed/cleansolarlogs/cleanproductionhistory"
+SILVER_BASE_PRODUCTION = f"gs://{BUCKET}/processed/cleansolarlogs/cleanproduction"
+
 
 # Initialize GCS
 try:
@@ -70,7 +72,7 @@ for month in range(1, 13):
 
         # 4. Write to Silver with Hive Partitioning
         if not final_df.empty:
-            target_dir = f"{SILVER_BASE}/{month_str}"
+            target_dir = f"{SILVER_BASE_HISTORY}/{month_str}"
             
             # Using partition_cols creates daily subfolders
             # storage_options is required here for the pyarrow engine
@@ -90,4 +92,4 @@ for month in range(1, 13):
 
 print(f"Moving solar panel production history to silver layer is done yo")
 
-    #code for current data COMING SOON TO A THEATRE NEAR YOU
+    #code for production data COMING SOON TO A THEATRE NEAR YOU
