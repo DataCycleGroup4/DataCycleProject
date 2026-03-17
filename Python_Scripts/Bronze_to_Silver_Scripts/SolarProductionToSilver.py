@@ -1,4 +1,3 @@
-"""
 import pandas as pd
 import os
 import gcsfs
@@ -6,11 +5,11 @@ import gcsfs
 # 1. Configuration
 SERVICE_ACCOUNT_KEY = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
 BUCKET = "data-cycle-lake"
-BRONZE_BASE = f"gs://{BUCKET}/raw/solarlogs"
+BRONZE_BASE = f"gs://{BUCKET}/raw/solarlogs/production"
 SILVER_BASE = f"gs://{BUCKET}/processed/cleansolarlogs/cleanproduction"
 
 # Column names for each inverter block (11 cols per inverter)
-INV_COLS = ['inv_id', 'pac', 'daysum', 'status', 'error', 'pdc1', 'pdc2', 'udc1', 'udc2', 'temp', 'uac']
+INV_COLS = ['inv_id', 'pac', 'daysum', 'status', 'error', 'pdc1', 'pdc2', 'udc1', 'udc2']
 
 # Initialize GCS
 try:
@@ -100,5 +99,3 @@ for month in range(1, 13):
         print(f"Error in Month {month_str}: {e}")
 
 print("\n--- Silver Layer Complete ---")
-
-"""
