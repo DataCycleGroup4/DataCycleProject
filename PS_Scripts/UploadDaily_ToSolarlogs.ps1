@@ -7,6 +7,16 @@ Get-ChildItem "Z:\*.csv" | ForEach-Object {
 	#format 01.02.2023-PV.csv
 
 	$month = $matches[1] 
+	$dest = "gs://data-cycle-lake/raw/solarlogs/productionhistory/${month}/"
+	Write-Host "Uploading $($_.Name) to destination: $dest"
+
+	try {
+		gsutil cp $_.FullName $dest
+	} catch {
+    	$errorMessage = "Data transfer failed for $($_.Name). Error: $($_.Exception.Message)"
+   		gcloud logging write solar-log-errors "$errorMessage" --severity=ERROR
+    	Write-Error $errorMessage
+	}
 
 	}
 
@@ -14,18 +24,18 @@ Get-ChildItem "Z:\*.csv" | ForEach-Object {
 	#format min230201.csv
 
 	$month = $matches[1]
-	}
-
-	$dest = "gs://data-cycle-lake/raw/solarlogs/${month}/"
+	$dest = "gs://data-cycle-lake/raw/solarlogs/production/${month}/"
 	Write-Host "Uploading $($_.Name) to destination: $dest"
 
 	try {
 		gsutil cp $_.FullName $dest
 	} catch {
-    		$errorMessage = "Data transfer failed for $($_.Name). Error: $($_.Exception.Message)"
+    	$errorMessage = "Data transfer failed for $($_.Name). Error: $($_.Exception.Message)"
    		gcloud logging write solar-log-errors "$errorMessage" --severity=ERROR
-    		Write-Error $errorMessage
+    	Write-Error $errorMessage
 	}
-}
+	}
+
 
 }
+
