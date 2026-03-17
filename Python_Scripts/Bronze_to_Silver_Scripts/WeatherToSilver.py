@@ -5,7 +5,7 @@ import gcsfs
 # Configuration
 SERVICE_ACCOUNT_KEY = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
 BUCKET = "data-cycle-lake"  
-BRONZE_BASE = f"gs://{BUCKET}/raw/bellevueconso/weather"
+BRONZE_BASE = f"gs://{BUCKET}/raw/weather"
 SILVER_BASE = f"gs://{BUCKET}/processed/cleanweather"   
 
 # Initialize GCS
