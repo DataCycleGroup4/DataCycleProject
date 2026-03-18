@@ -4,7 +4,6 @@ import os
 
 # 1. Configuration
 SERVICE_ACCOUNT_KEY = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
-
 BUCKET = "data-cycle-lake"
 BRONZE_BASE = f"gs://{BUCKET}/raw/bellevuebooking/csv"
 SILVER_BASE = f"gs://{BUCKET}/processed/cleanbellevuebooking"
@@ -29,19 +28,17 @@ for month in range(1, 13):
     bronze_glob = f"{BRONZE_BASE}/{month_str}/*.csv*"
     
     try:
-        # Find all files for the current month
         files = fs.glob(bronze_glob)
         if not files:
             print(f"  ! No files found in {bronze_glob}. Skipping.")
             continue
         
-        print(f"  + Found {len(files)} files. Starting ingestion...")
+        print(f"  + Month {month_str}: Processing {len(files)} files...")
 
         df_list = []
         for f in files:
             full_path = f if f.startswith('gs://') else f"gs://{f}"
             with fs.open(full_path, mode='rb') as open_file:
-                # Booking file uses Tabs ('\t') and UTF-8
                 chunk = pd.read_csv(
                     open_file, 
                     sep='\t', 
@@ -57,7 +54,6 @@ for month in range(1, 13):
         df = pd.concat(df_list, ignore_index=True)
 
         # 2. Cleaning & Renaming
-        # Renaming columns from French to standard English technical names
         df = df.rename(columns={
             'Nom': 'room_id',
             'Date': 'raw_date',
@@ -69,35 +65,37 @@ for month in range(1, 13):
             'Division': 'department'
         })
 
-        # 3. Date Transformation
-        # 1. Convert to datetime, but keep the NaT (Not a Time) for now
+        # 3. Date Transformation & Imputation
+        # Ensure raw_date is a string and handle existing NaNs
+        df['raw_date'] = df['raw_date'].astype(str).replace('nan', '')
+
+        for fr, en in french_months.items():
+            df['raw_date'] = df['raw_date'].str.replace(fr, en, regex=False)
+        
+        # Convert to datetime (Now it will recognize "Mar", "Apr", etc.)
         df['date_dt'] = pd.to_datetime(df['raw_date'], format='%d %b %Y', errors='coerce')
 
-        # 2. Define your placeholder
+        # Define placeholders
         DATE_PLACEHOLDER = pd.Timestamp('1900-01-01')
         STRING_PLACEHOLDER = "EMPTY"
 
-        # 3. Fill the NaNs/NaTs before partitioning
         df['date_dt'] = df['date_dt'].fillna(DATE_PLACEHOLDER)
 
-        # 4. Fill other categorical columns with "UNKNOWN"
-        cols_to_fill = ['room_id', 'instructor', 'department']
+        # Fill other categorical columns
+        cols_to_fill = ['room_id', 'instructor', 'department', 'activity_type']
         df[cols_to_fill] = df[cols_to_fill].fillna(STRING_PLACEHOLDER)
 
-        # 5. Partitioning Logic
+        # Create 'date' string for partitioning
         df['date'] = df['date_dt'].dt.date.astype(str)
 
-        df_cleaned = df.copy() 
-
-        # Select relevant columns for the Silver Layer
+        # Select relevant columns
         cols_to_keep = ['date', 'room_id', 'start_time', 'end_time', 'reservation_id', 'activity_type', 'instructor', 'department']
-        final_df = df_cleaned[cols_to_keep]
+        final_df = df[cols_to_keep].copy()
 
         # 4. Write to Silver Layer 
         if not final_df.empty:
             target_dir = f"{SILVER_BASE}/{month_str}"
             
-            # Using 'date' as a partition column creates daily folders automatically
             final_df.to_parquet(
                 target_dir,
                 engine='pyarrow',
@@ -105,9 +103,9 @@ for month in range(1, 13):
                 partition_cols=['date'],
                 storage_options={"token": SERVICE_ACCOUNT_KEY}
             )
-            print(f"Month {month_str}: Successfully written as daily partitions.")
+            print(f"  -> Successfully written partitions for Month {month_str}.")
         else:
-            print(f"Month {month_str}: No valid data.")
+            print(f"  ! Month {month_str}: No data to write.")
             
     except Exception as e:
         print(f"Error in Month {month_str}: {e}")
