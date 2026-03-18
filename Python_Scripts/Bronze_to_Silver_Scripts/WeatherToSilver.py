@@ -90,6 +90,12 @@ for month in range(1, 13):
         # 4. Write to Silver
         target_dir = f"{SILVER_BASE}/{month_str}"
         print(f"  + Writing {len(final_df)} cleaned rows to Parquet: {target_dir}")
+
+                    # added code to clean out previous files from directory
+        if fs.exists(target_dir):
+            print(f"Month {month_str}: Existing data found. Deleting to prevent duplicates...")
+                # recursive=True is vital to remove the directory and all sub-partitions
+            fs.rm(target_dir, recursive=True)
         
         final_df.to_parquet(
             target_dir,

@@ -72,6 +72,12 @@ for month in range(1, 13):
         if not final_df.empty:
             target_dir = f"{SILVER_BASE}/{month_str}"
 
+                        # added code to clean out previous files from directory
+            if fs.exists(target_dir):
+                print(f"Month {month_str}: Existing data found. Deleting to prevent duplicates...")
+                # recursive=True is vital to remove the directory and all sub-partitions
+                fs.rm(target_dir, recursive=True)
+
             # Using partition_cols creates daily subfolders
             # storage_options is required here for the pyarrow engine
             final_df.to_parquet(

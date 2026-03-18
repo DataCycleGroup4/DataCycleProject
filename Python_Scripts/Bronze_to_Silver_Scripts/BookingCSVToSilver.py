@@ -98,6 +98,10 @@ for month in range(1, 13):
 
         if not final_df.empty:
             target_dir = f"{SILVER_BASE}/{month_str}"
+
+            if fs.exists(target_dir):
+                # recursive=True is critical to wipe sub-folders (like date=2024-01-01)
+                fs.rm(target_dir, recursive=True)
             final_df.to_parquet(
                 target_dir,
                 engine='pyarrow',
