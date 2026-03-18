@@ -70,22 +70,24 @@ for month in range(1, 13):
         })
 
         # 3. Date Transformation
-        # Ensure raw_date is string-safe for replacement (avoids NaN/object issues)
-        df['raw_date'] = df['raw_date'].astype(str).fillna("")
-
-        # We replace French month abbreviations with English ones in the new 'raw_date' column
-        for fr, en in french_months.items():
-            df['raw_date'] = df['raw_date'].str.replace(fr, en, regex=False)
-        
-        # Convert the string date to an actual Python datetime object
+        # 1. Convert to datetime, but keep the NaT (Not a Time) for now
         df['date_dt'] = pd.to_datetime(df['raw_date'], format='%d %b %Y', errors='coerce')
 
-        # Filter for quality: Keep rows with valid dates matching the current month loop
-        mask = (df['date_dt'].notna()) & (df['date_dt'].dt.month == month)
-        df_cleaned = df[mask].copy()
+        # 2. Define your placeholder
+        DATE_PLACEHOLDER = pd.Timestamp('1900-01-01')
+        STRING_PLACEHOLDER = "EMPTY"
 
-        # Create 'date' string for Hive-style partitioning (folder structure)
-        df_cleaned['date'] = df_cleaned['date_dt'].dt.date.astype(str)
+        # 3. Fill the NaNs/NaTs before partitioning
+        df['date_dt'] = df['date_dt'].fillna(DATE_PLACEHOLDER)
+
+        # 4. Fill other categorical columns with "UNKNOWN"
+        cols_to_fill = ['room_id', 'instructor', 'department']
+        df[cols_to_fill] = df[cols_to_fill].fillna(STRING_PLACEHOLDER)
+
+        # 5. Partitioning Logic
+        df['date'] = df['date_dt'].dt.date.astype(str)
+
+        df_cleaned = df.copy() 
 
         # Select relevant columns for the Silver Layer
         cols_to_keep = ['date', 'room_id', 'start_time', 'end_time', 'reservation_id', 'activity_type', 'instructor', 'department']
