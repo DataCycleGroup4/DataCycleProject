@@ -36,7 +36,7 @@ for month in range(1, 13):
                     open_file,
                     sep=None,
                     engine='python',
-                    encoding='utf-16',
+                    encoding='utf-8-sig',
                     on_bad_lines='skip'
                 )
 
