@@ -9,7 +9,7 @@ BRONZE_BASE = f"gs://{BUCKET}/raw/solarlogs/production"
 SILVER_BASE = f"gs://{BUCKET}/processed/cleansolarlogs/cleanproduction"
 
 # Column names for each inverter block (11 cols per inverter)
-INV_COLS = ['inv_id', 'pac', 'daysum', 'status', 'error', 'pdc1', 'pdc2', 'udc1', 'udc2']
+INV_COLS = ['inv_id', 'pac', 'daysum', 'status', 'error', 'pdc1', 'pdc2', 'udc1', 'udc2', 'temp', 'uac']
 
 # Initialize GCS
 try:
@@ -72,11 +72,11 @@ for month in range(1, 13):
         df_cleaned['time'] = df_cleaned['time_str'].astype(str).str.strip()
 
         # Cast numeric columns
-        for col in ['inv_id', 'pac', 'daysum', 'status', 'error', 'pdc1', 'pdc2', 'udc1', 'udc2']:
+        for col in ['inv_id', 'pac', 'daysum', 'status', 'error', 'pdc1', 'pdc2', 'udc1', 'udc2', 'temp', 'uac']:
             df_cleaned[col] = pd.to_numeric(df_cleaned[col], errors='coerce')
 
         final_df = df_cleaned[['date', 'time', 'inv_id', 'pac', 'daysum', 'status', 'error',
-                                'pdc1', 'pdc2', 'udc1', 'udc2']]
+                                'pdc1', 'pdc2', 'udc1', 'udc2', 'temp', 'uac']]
 
         # Sort chronologically
         final_df = final_df.sort_values(['date', 'time', 'inv_id']).reset_index(drop=True)
