@@ -30,10 +30,9 @@ for month in range(1, 13):
     try:
         files = fs.glob(bronze_glob)
         if not files:
-            print(f"  ! No files found in {bronze_glob}. Skipping.")
             continue
         
-        print(f"  + Month {month_str}: Processing {len(files)} files...")
+        print(f"--- Processing Month {month_str} ({len(files)} files) ---")
 
         df_list = []
         for f in files:
@@ -46,6 +45,8 @@ for month in range(1, 13):
                     encoding='utf-8', 
                     on_bad_lines='skip'
                 )
+                # Clean headers immediately (removes invisible spaces/BOM)
+                chunk.columns = chunk.columns.str.strip()
                 df_list.append(chunk)
         
         if not df_list:
@@ -53,7 +54,6 @@ for month in range(1, 13):
             
         df = pd.concat(df_list, ignore_index=True)
 
-        # 2. Cleaning & Renaming
         df = df.rename(columns={
             'Nom': 'room_id',
             'Date': 'raw_date',
@@ -65,37 +65,41 @@ for month in range(1, 13):
             'Division': 'department'
         })
 
-        # 3. Date Transformation & Imputation
-        # Ensure raw_date is a string and handle existing NaNs
-        df['raw_date'] = df['raw_date'].astype(str).replace('nan', '')
+        # Check if rename actually worked for the date column
+        if 'raw_date' not in df.columns:
+            print(f"  ! Skip: 'Date' column not found in headers: {df.columns.tolist()}")
+            continue
 
+        # Fill missing text values with "EMPTY"
+        cols_to_fill = ['room_id', 'instructor', 'department', 'activity_type']
+        for col in cols_to_fill:
+            if col in df.columns:
+                df[col] = df[col].fillna("EMPTY")
+
+        # 4. Date Transformation with Placeholder
+        # Translate French -> English
+        df['raw_date'] = df['raw_date'].astype(str).str.strip()
         for fr, en in french_months.items():
             df['raw_date'] = df['raw_date'].str.replace(fr, en, regex=False)
         
-        # Convert to datetime (Now it will recognize "Mar", "Apr", etc.)
+        # Convert to datetime (NaT if it fails)
         df['date_dt'] = pd.to_datetime(df['raw_date'], format='%d %b %Y', errors='coerce')
 
-        # Define placeholders
+        # Use 1900-01-01 as the placeholder for invalid/missing dates
         DATE_PLACEHOLDER = pd.Timestamp('1900-01-01')
-        STRING_PLACEHOLDER = "EMPTY"
-
         df['date_dt'] = df['date_dt'].fillna(DATE_PLACEHOLDER)
 
-        # Fill other categorical columns
-        cols_to_fill = ['room_id', 'instructor', 'department', 'activity_type']
-        df[cols_to_fill] = df[cols_to_fill].fillna(STRING_PLACEHOLDER)
-
-        # Create 'date' string for partitioning
+        # Create partitioning string
         df['date'] = df['date_dt'].dt.date.astype(str)
 
-        # Select relevant columns
+        # 5. Final Selection & Write
         cols_to_keep = ['date', 'room_id', 'start_time', 'end_time', 'reservation_id', 'activity_type', 'instructor', 'department']
-        final_df = df[cols_to_keep].copy()
+        # Filter list to only include columns that actually exist to avoid KeyErrors
+        existing_cols = [c for c in cols_to_keep if c in df.columns]
+        final_df = df[existing_cols].copy()
 
-        # 4. Write to Silver Layer 
         if not final_df.empty:
             target_dir = f"{SILVER_BASE}/{month_str}"
-            
             final_df.to_parquet(
                 target_dir,
                 engine='pyarrow',
@@ -103,11 +107,9 @@ for month in range(1, 13):
                 partition_cols=['date'],
                 storage_options={"token": SERVICE_ACCOUNT_KEY}
             )
-            print(f"  -> Successfully written partitions for Month {month_str}.")
-        else:
-            print(f"  ! Month {month_str}: No data to write.")
+            print(f"  + Month {month_str} saved to Silver Layer.")
             
     except Exception as e:
-        print(f"Error in Month {month_str}: {e}")
+        print(f"  !! Error in Month {month_str}: {e}")
 
 print("\n--- Booking Silver Layer ETL Complete ---")
