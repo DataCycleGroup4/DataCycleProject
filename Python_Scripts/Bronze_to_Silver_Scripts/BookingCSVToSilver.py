@@ -61,6 +61,7 @@ for month in range(1, 13):
         # 2. Rename Columns (Now that "Nom" and "Date" are clean)
         df = df.rename(columns={
             'Nom': 'room_id', #string
+            'Nom Entier': 'room_name', #string
             'Date': 'raw_date', #date
             'Date de début': 'start_time', #time
             'Date de fin': 'end_time', #time
@@ -69,6 +70,7 @@ for month in range(1, 13):
             'Codes': 'reservation_code', #string
             'Nom de l\'utilisateur': 'reserved_by', #string
             'Sigle de salle remplacée': 'alt_room_id', #string
+            'Nom entier de la salle remplacée': 'alt_room_name', # string
             'Classe': 'class', #string
             'Activité': 'activity_type', #string
             'Professeur': 'instructor', #string
