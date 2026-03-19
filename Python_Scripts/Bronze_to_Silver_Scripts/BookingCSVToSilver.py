@@ -60,14 +60,22 @@ for month in range(1, 13):
 
         # 2. Rename Columns (Now that "Nom" and "Date" are clean)
         df = df.rename(columns={
-            'Nom': 'room_id',
-            'Date': 'raw_date',
-            'Date de début': 'start_time',
-            'Date de fin': 'end_time',
-            'Rés.-no': 'reservation_id',
-            'Activité': 'activity_type',
-            'Professeur': 'instructor',
-            'Division': 'department'
+            'Nom': 'room_id', #string
+            'Date': 'raw_date', #date
+            'Date de début': 'start_time', #time
+            'Date de fin': 'end_time', #time
+            'Rés.-no': 'reservation_id', #string
+            'Type de réservation': 'reservation_type', #string
+            'Codes': 'reservation_code', #string
+            'Nom de l\'utilisateur': 'reserved_by', #string
+            'Sigle de salle remplacée': 'alt_room_id', #string
+            'Classe': 'class', #string
+            'Activité': 'activity_type', #string
+            'Professeur': 'instructor', #string
+            'Division': 'department', #string
+            'Poste de dépenses': 'expense_category', #string
+            'Remarque': 'remarks', #string
+            'Annotation': 'comments' #string
         })
 
         if 'raw_date' not in df.columns:
@@ -75,7 +83,7 @@ for month in range(1, 13):
             continue
 
         # 3. Handle Placeholders
-        cols_to_fill = ['room_id', 'instructor', 'department', 'activity_type']
+        cols_to_fill = ['room_id', 'instructor', 'department', 'activity_type', 'reservation_type', 'reservation_code', 'reserved_by', 'alt_room_id', 'class', 'expense_category', 'remarks', 'comments']
         for col in cols_to_fill:
             if col in df.columns:
                 df[col] = df[col].replace(['nan', 'None', ''], "EMPTY").fillna("EMPTY")
@@ -92,7 +100,7 @@ for month in range(1, 13):
         df['date'] = df['date_dt'].dt.date.astype(str)
 
         # 5. Select and Write
-        cols_to_keep = ['date', 'room_id', 'start_time', 'end_time', 'reservation_id', 'activity_type', 'instructor', 'department']
+        cols_to_keep = ['date', 'room_id', 'start_time', 'end_time', 'reservation_id', 'reservation_type', 'reservation_code', 'reserved_by', 'alt_room_id', 'activity_type', 'instructor', 'department', 'class', 'expense_category', 'remarks', 'comments']
         existing_cols = [c for c in cols_to_keep if c in df.columns]
         final_df = df[existing_cols].copy()
 
