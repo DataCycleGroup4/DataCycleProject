@@ -23,7 +23,7 @@ SILVER_PATHS = {
 TABLE_REF = {table: f"{PROJECT_ID}.{DATASET_ID}.{table}" for table in [
     "DimTime", "DimReservation", "DimRoom", "DimConsumption",
     "DimHumidity", "DimTemp", "DimInverter", "DimErrors",
-    "DimForecast", "DimConsumptionPrediction", "DimProductionPrediction",
+    "DimForecast", "DimConsumptionPrediction", "DimProductionPredictionPac", "DimProductionPredictionDaysum",
     "Power_FactTable", "Weather_FactTable", "Rooms_FactTable",
     "Prediction_FactTable",
 ]}

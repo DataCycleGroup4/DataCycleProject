@@ -9,8 +9,7 @@ def load_dim_consumption_prediction(client, consumption_df, run_date):
     records = []
     for _, row in consumption_df.iterrows():
         raw = f"cpred_{run_date}_{row['time']}"
-        records.append({"Cons_PredictionID": hashlib.md5(raw.encode()).hexdigest(),
-            "Prediction": float(row["value_acquired"])})
+        records.append({"Cons_PredictionID": hashlib.md5(raw.encode()).hexdigest()})
     df = pd.DataFrame(records)
     upsert_dim_table(client, TABLE_REF["DimConsumptionPrediction"], df, "Cons_PredictionID")
     lookup = {}

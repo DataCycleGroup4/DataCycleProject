@@ -14,7 +14,8 @@ from etl.dim_inverter import load_dim_inverter
 from etl.dim_errors import load_dim_errors
 from etl.dim_forecast import load_dim_forecast
 from etl.dim_consumption_prediction import load_dim_consumption_prediction
-from etl.dim_production_prediction import load_dim_production_prediction
+from etl.dim_production_prediction_pac import load_dim_production_prediction_pac
+from etl.dim_production_prediction_daysum import load_dim_production_prediction_daysum
 from etl.fact_power import load_power_fact
 from etl.fact_weather import load_weather_fact
 from etl.fact_rooms import load_rooms_fact
@@ -73,7 +74,8 @@ def main():
     error_lookup = load_dim_errors(client, production_df, run_date)
     forecast_lookup = load_dim_forecast(client, weather_df, run_date)
     cons_pred_lookup = load_dim_consumption_prediction(client, consumption_df, run_date)
-    prod_pred_df = load_dim_production_prediction(client, weather_df, run_date)
+    prod_pred_pac_df = load_dim_production_prediction_pac(client, weather_df, run_date)
+    prod_pred_daysum_df = load_dim_production_prediction_daysum(client, weather_df, run_date)
 
     # 4. Load fact tables
     logger.info("Loading fact tables...")
@@ -82,7 +84,7 @@ def main():
     load_weather_fact(client, weather_df, humidity_df, temp_df, run_date,
                       time_lookup, humidity_lookup, forecast_lookup, temp_lookup)
     load_rooms_fact(client, booking_df, run_date, time_lookup, room_lookup, reservation_lookup)
-    load_prediction_fact(client, run_date, time_lookup, cons_pred_lookup, prod_pred_df, consumption_df)
+    load_prediction_fact(client, run_date, time_lookup, cons_pred_lookup, prod_pred_pac_df, prod_pred_daysum_df, consumption_df)
 
     logger.info(f"=== Gold Layer ETL COMPLETE for {run_date} ===")
 
