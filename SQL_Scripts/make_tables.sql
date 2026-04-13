@@ -148,8 +148,7 @@ CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.D
   Prod_PredictionID  STRING  NOT NULL,  -- UUID
   pred_date DATE NOT NULL,
   pred_hour INT64 NOT NULL,
-  pred_sum_pac FLOAT64 NOT NULL,
-  sum_pac INT64 NOT NULL
+  pred_mean_pac FLOAT64 NOT NULL
 )
 OPTIONS (description = 'Production forecast/prediction dimension');
 
@@ -161,7 +160,6 @@ CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.D
   pred_date DATE NOT NULL,
   pred_hour INT64 NOT NULL,
   pred_daysum FLOAT64 NOT NULL,
-  daysum INT64 NOT NULL
 )
 OPTIONS (description = 'Production forecast/prediction dimension');
 
