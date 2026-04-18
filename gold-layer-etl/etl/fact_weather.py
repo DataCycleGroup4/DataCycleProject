@@ -27,17 +27,34 @@ def load_weather_fact(client, weather_df, humidity_df, temp_df, run_date,
     hum_vals = {_normalize_time(r["time"]): float(r["value_acquired"]) for _, r in humidity_df.iterrows()}
     tmp_vals = {_normalize_time(r["time"]): float(r["value_acquired"]) for _, r in temp_df.iterrows()}
 
-    # Diagnostic: log time key overlap before processing
+    # --- DIAGNOSTIC ---
     weather_times = {_normalize_time(t) for t in weather_df["time"]}
     hum_overlap   = len(weather_times & set(hum_vals))
     tmp_overlap   = len(weather_times & set(tmp_vals))
-    logger.info(f"Time key overlap — humidity: {hum_overlap}/{len(weather_times)}, temp: {tmp_overlap}/{len(weather_times)}")
-    if hum_overlap == 0 or tmp_overlap == 0:
-        logger.warning(
-            f"Zero overlap detected. Sample weather times: {list(weather_times)[:5]} | "
-            f"Sample humidity times: {list(hum_vals)[:5]} | "
-            f"Sample temp times: {list(tmp_vals)[:5]}"
-        )
+    hum_id_hits   = sum(1 for t in weather_times if t in humidity_lookup)
+    tmp_id_hits   = sum(1 for t in weather_times if t in temp_lookup)
+
+    logger.info(f"[DIAG] weather_df rows: {len(weather_df)}, unique times: {len(weather_times)}")
+    logger.info(f"[DIAG] humidity_df rows: {len(humidity_df)}, temp_df rows: {len(temp_df)}")
+    logger.info(f"[DIAG] Sample weather times:       {sorted(list(weather_times))[:3]}")
+    logger.info(f"[DIAG] Sample humidity_lookup keys: {sorted(list(humidity_lookup.keys()))[:3]}")
+    logger.info(f"[DIAG] Sample temp_lookup keys:     {sorted(list(temp_lookup.keys()))[:3]}")
+    logger.info(f"[DIAG] Sample hum_vals keys:        {sorted(list(hum_vals.keys()))[:3]}")
+    logger.info(f"[DIAG] Sample tmp_vals keys:        {sorted(list(tmp_vals.keys()))[:3]}")
+    logger.info(f"[DIAG] hum_vals overlap (values):   {hum_overlap}/{len(weather_times)}")
+    logger.info(f"[DIAG] tmp_vals overlap (values):   {tmp_overlap}/{len(weather_times)}")
+    logger.info(f"[DIAG] humidity_lookup hits (IDs):  {hum_id_hits}/{len(weather_times)}")
+    logger.info(f"[DIAG] temp_lookup hits (IDs):      {tmp_id_hits}/{len(weather_times)}")
+
+    if hum_overlap == 0:
+        logger.error("[DIAG] ZERO hum_vals hits — humidity values will all be None")
+    if tmp_overlap == 0:
+        logger.error("[DIAG] ZERO tmp_vals hits — temp values will all be None")
+    if hum_id_hits == 0:
+        logger.error("[DIAG] ZERO humidity_lookup hits — HumidityID will all be empty")
+    if tmp_id_hits == 0:
+        logger.error("[DIAG] ZERO temp_lookup hits — TempID will all be empty")
+    # --- END DIAGNOSTIC ---
 
     records, seen = [], set()
     for _, row in weather_df.iterrows():
@@ -92,10 +109,16 @@ def load_weather_fact(client, weather_df, humidity_df, temp_df, run_date,
             "partition_date":       run_date
         })
 
-    logger.info(f"Built {len(records)} fact records from {len(weather_df)} weather rows")
+    logger.info(f"[DIAG] Built {len(records)} fact records from {len(weather_df)} weather rows")
 
     df = pd.DataFrame(records)
     if not df.empty:
         df["partition_date"] = pd.to_datetime(df["partition_date"]).dt.date
+        null_hum = df["HumidityID"].eq("").sum()
+        null_tmp = df["TempID"].eq("").sum()
+        null_hum_val = df["Humidity_Value"].isna().sum()
+        null_tmp_val = df["Temp_Value"].isna().sum()
+        logger.info(f"[DIAG] Final df — missing HumidityID: {null_hum}, TempID: {null_tmp}, "
+                    f"Humidity_Value: {null_hum_val}, Temp_Value: {null_tmp_val}")
 
     return append_fact_table(client, TABLE_REF["Weather_FactTable"], df, run_date)

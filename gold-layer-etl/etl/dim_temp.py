@@ -43,7 +43,8 @@ def load_dim_temp(client, temp_df, run_date):
         raw = f"temp_lvl_{row['value_acquired']}_{row['variation']}"
         tid = hashlib.md5(raw.encode()).hexdigest()
         
+        
         # We use 'time' as the key to match the lookup pattern in fact_weather.py
-        lookup[row["time"]] = tid
+        lookup[_normalize_time(row["time"])] = tid
 
     return lookup
