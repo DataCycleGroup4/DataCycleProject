@@ -6,6 +6,13 @@ from utils.bq_writer import upsert_dim_table
 
 logger = logging.getLogger(__name__)
 
+def _normalize_time(t) -> str:
+    s = str(t).strip()
+    parts = s.split(":")
+    if len(parts) == 2:
+        s = f"{s}:00"
+    return s.zfill(8)
+
 def load_dim_humidity(client, humidity_df, run_date):
     if humidity_df.empty:
         return {}
