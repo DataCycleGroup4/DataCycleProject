@@ -14,6 +14,7 @@ def load_power_fact(client, production_df, consumption_df, run_date,
 
     # Pre-calculate EOD totals and running percentages
     total_prod_eod_w = production_df["daysum"].astype(float).max()
+    total_cons_eod_w = consumption_df["value_acquired"].astype(float).max()
     running = production_df.groupby("time").apply(
         lambda g: (g["pac"].astype(float) > 0).sum() / len(g)).to_dict()
 
@@ -50,6 +51,7 @@ def load_power_fact(client, production_df, consumption_df, run_date,
             "ErrorID": err_id,
             "Prod_vs_Consumption_Diff": diff_kw,
             "Total_Production_End_of_Day": total_prod_eod_w / 1000,
+            "Total_Consumption_End_of_Day": total_cons_eod_w / 1000,
             "Pct_Inverters_Running": running.get(t, 0.0),
             "partition_date": run_date
         })

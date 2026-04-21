@@ -65,30 +65,6 @@ CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.D
   Error_info  STRING             -- Error description or fault code
 )
 OPTIONS (description = 'Error and fault codes for inverters');
-
-
--- -----------------------------------------------------------------------------
--- DimHumidity
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimHumidity` (
-  HumidityID  STRING  NOT NULL,  -- UUID
-  Value       FLOAT64,           -- Humidity (%)
-  Variation   FLOAT64            -- Delta vs previous reading
-)
-OPTIONS (description = 'Humidity sensor dimension');
-
-
--- -----------------------------------------------------------------------------
--- DimTemp
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimTemp` (
-  TempID     STRING  NOT NULL,  -- UUID
-  Value      FLOAT64,           -- Temperature (°C)
-  Variation  FLOAT64            -- Delta vs previous reading
-)
-OPTIONS (description = 'Temperature sensor dimension');
-
-
 -- -----------------------------------------------------------------------------
 -- DimForecast
 -- -----------------------------------------------------------------------------
@@ -184,7 +160,9 @@ CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.P
   -- Measures
   Prod_vs_Consumption_Diff     FLOAT64,           -- Production minus consumption (kWh)
   Total_Production_End_of_Day  FLOAT64,           -- Cumulative production at day end (kWh)
+  Total_Consumption_End_of_day FLOAT64,
   Pct_Inverters_Running        FLOAT64,           -- % of inverters active (0–100)
+
 
   -- Partition column
   partition_date               DATE    NOT NULL   -- DATE(Year, Month, Day) from DimTime
@@ -203,9 +181,7 @@ CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.W
 
   -- Foreign keys
   TimeID      STRING  NOT NULL,  -- → DimTime.TimeID
-  HumidityID  STRING  NOT NULL,  -- → DimHumidity.HumidityID
   ForecastID  STRING  NOT NULL,  -- → DimForecast.ForecastID
-  TempID      STRING  NOT NULL,  -- → DimTemp.TempID
 
   -- Measures
   Most_Recent_Forecast  BOOL,     -- TRUE if this is the latest forecast for the slot
@@ -287,12 +263,6 @@ ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimConsumption`
 ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimErrors`
   ADD PRIMARY KEY (ErrorID) NOT ENFORCED;
 
-ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimHumidity`
-  ADD PRIMARY KEY (HumidityID) NOT ENFORCED;
-
-ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimTemp`
-  ADD PRIMARY KEY (TempID) NOT ENFORCED;
-
 ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimForecast`
   ADD PRIMARY KEY (ForecastID) NOT ENFORCED;
 
@@ -333,9 +303,7 @@ ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Power_FactTable`
 
 ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Weather_FactTable`
   ADD FOREIGN KEY (TimeID)     REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimTime`(TimeID)         NOT ENFORCED,
-  ADD FOREIGN KEY (HumidityID) REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimHumidity`(HumidityID) NOT ENFORCED,
-  ADD FOREIGN KEY (ForecastID) REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimForecast`(ForecastID) NOT ENFORCED,
-  ADD FOREIGN KEY (TempID)     REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimTemp`(TempID)         NOT ENFORCED;
+  ADD FOREIGN KEY (ForecastID) REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimForecast`(ForecastID) NOT ENFORCED;
 
 ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Rooms_FactTable`
   ADD FOREIGN KEY (TimeID)        REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimTime`(TimeID)               NOT ENFORCED,
