@@ -6,6 +6,13 @@ from utils.bq_writer import upsert_dim_table
 
 logger = logging.getLogger(__name__)
 
+def _normalize_time(t) -> str:
+    s = str(t).strip()
+    parts = s.split(":")
+    if len(parts) == 2:
+        s = f"{s}:00"
+    return s.zfill(8)
+
 def load_dim_temp(client, temp_df, run_date):
     if temp_df.empty:
         return {}
@@ -36,7 +43,8 @@ def load_dim_temp(client, temp_df, run_date):
         raw = f"temp_lvl_{row['value_acquired']}_{row['variation']}"
         tid = hashlib.md5(raw.encode()).hexdigest()
         
+        
         # We use 'time' as the key to match the lookup pattern in fact_weather.py
-        lookup[row["time"]] = tid
+        lookup[_normalize_time(row["time"])] = tid
 
     return lookup

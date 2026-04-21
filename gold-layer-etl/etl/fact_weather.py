@@ -6,6 +6,16 @@ from utils.bq_writer import append_fact_table
 
 logger = logging.getLogger(__name__)
 
+
+def _normalize_time(t) -> str:
+    """Normalize a time value to 'HH:MM:SS' string for consistent key matching."""
+    s = str(t).strip()
+    parts = s.split(":")
+    if len(parts) == 2:
+        s = f"{s}:00"
+    return s.zfill(8)  # ensures 'H:MM:SS' -> '0H:MM:SS'
+
+
 def load_weather_fact(client, weather_df, humidity_df, temp_df, run_date,
                       time_lookup, humidity_lookup, forecast_lookup, temp_lookup):
     if weather_df.empty:
@@ -53,6 +63,8 @@ def load_weather_fact(client, weather_df, humidity_df, temp_df, run_date,
             "Temp_Today": float(tmp_vals.get(hour, pd.NA)),
             "partition_date": run_date
         })
+
+    logger.info(f"[DIAG] Built {len(records)} fact records from {len(weather_df)} weather rows")
 
     df = pd.DataFrame(records)
     if not df.empty:
