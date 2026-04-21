@@ -6,36 +6,47 @@ from utils.bq_writer import append_fact_table
 
 logger = logging.getLogger(__name__)
 
+def _normalize_time(t) -> str:
+    """Ensures time is always HH:MM:SS."""
+    s = str(t).strip()
+    parts = s.split(":")
+    if len(parts) == 2: s = f"{s}:00"
+    if len(parts) == 1: s = f"{s.zfill(2)}:00:00"
+    return s.zfill(8)
+
 def load_rooms_fact(client, booking_df, run_date, time_lookup, room_lookup, reservation_lookup):
     if booking_df.empty:
+        logger.warning(f"Booking DF is empty for {run_date}. Skipping.")
         return 0
 
     y, m, d = (int(x) for x in run_date.split("-"))
-    total_rooms_in_system = len(room_lookup) # Total rooms known to the dimension
-
+    total_rooms = len(room_lookup)
     records = []
+
+    # Group by normalized time to ensure consistency with DimTime
     for time_str, group in booking_df.groupby("start_time"):
-        parts = time_str.split(":")
-        h, mi = int(parts[0]), int(parts[1])
-        s = 0 # Defaulting to 0 to match DimTime's grain
+        norm_t = _normalize_time(time_str)
+        parts = norm_t.split(":")
+        h, mi, s = int(parts[0]), int(parts[1]), int(parts[2])
         
-        # 1. Lookup the IDs
+        # 1. Lookup the TimeID (The tuple MUST match dim_time)
         time_id = time_lookup.get((y, m, d, h, mi, s), "")
         
+        # Calculate Metrics
         booked_count = group["room_id"].nunique()
-        pct_booked = booked_count / total_rooms_in_system if total_rooms_in_system > 0 else 0
-        free_count = total_rooms_in_system - booked_count
+        pct_booked = booked_count / total_rooms if total_rooms > 0 else 0
+        free_count = total_rooms - booked_count
 
         for _, row in group.iterrows():
-            # Match the room ID from our stable dim_room (MD5 hex)
+            # 2. Match IDs with strict string casting
             rid = room_lookup.get(str(row["room_id"]), "")
             
-            # Match the reservation key exactly as defined in dim_reservation lookup
+            # Use the exact same key format as dim_reservation.py
             rkey = f"{row['reservation_id']}_{row.get('start_time','')}"
             resid = reservation_lookup.get(rkey, "")
 
-            # Unique Fact ID
-            fid_raw = f"rf_{run_date}_{time_str}_{row['room_id']}_{row['reservation_id']}"
+            # 3. Create Fact Record
+            fid_raw = f"rf_{run_date}_{norm_t}_{row['room_id']}_{row['reservation_id']}"
             fid = hashlib.md5(fid_raw.encode()).hexdigest()
 
             records.append({
@@ -48,8 +59,13 @@ def load_rooms_fact(client, booking_df, run_date, time_lookup, room_lookup, rese
                 "partition_date": run_date
             })
 
+    # DIAGNOSTIC: This will tell you if the loop actually produced data
+    logger.info(f"[DIAG] Built {len(records)} room fact records for {run_date}")
+
+    if not records:
+        return 0
+
     df = pd.DataFrame(records)
-    if not df.empty:
-        df["partition_date"] = pd.to_datetime(df["partition_date"]).dt.date
+    df["partition_date"] = pd.to_datetime(df["partition_date"]).dt.date
         
     return append_fact_table(client, TABLE_REF["Rooms_FactTable"], df, run_date)
