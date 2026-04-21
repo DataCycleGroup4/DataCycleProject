@@ -49,6 +49,10 @@ def main():
     production_df = read_parquet_from_gcs(BUCKET_NAME, resolve_silver_path(SILVER_PATHS["production"], run_date))
     weather_df = read_parquet_from_gcs(BUCKET_NAME, resolve_silver_path(SILVER_PATHS["weather"], run_date))
 
+    print("weather times:", weather_df["time"].head(5).tolist())
+    print("humidity times:", humidity_df["time"].head(5).tolist())
+    print("temp times:", temp_df["time"].head(5).tolist())
+
     if all(df.empty for df in [booking_df, consumption_df, humidity_df, temp_df, production_df, weather_df]):
         logger.warning(f"No data found for {run_date}. Exiting.")
         return

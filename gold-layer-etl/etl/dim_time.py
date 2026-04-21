@@ -20,13 +20,8 @@ def build_dim_time(all_timestamps):
             continue
         seen.add(key)
         
-        # Create a proper pandas Timestamp object for Power BI's timeline
-        full_ts = pd.Timestamp(year=ts.year, month=ts.month, day=ts.day, 
-                               hour=ts.hour, minute=ts.minute, second=ts.second)
-        
         records.append({
             "TimeID": generate_time_id(*key),
-            "FullTimestamp": full_ts,  # This is the "Magic Column" for Power BI
             "Year": ts.year, 
             "Month": ts.month, 
             "Day": ts.day,
@@ -43,8 +38,7 @@ def load_dim_time(client, all_timestamps):
 
     df = build_dim_time(all_timestamps)
     
-    # Ensure BigQuery receives the timestamp in a format it recognizes
-    df["FullTimestamp"] = pd.to_datetime(df["FullTimestamp"])
+
     
     upsert_dim_table(client, TABLE_REF["DimTime"], df, "TimeID")
     
