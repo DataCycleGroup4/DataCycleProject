@@ -1,0 +1,79 @@
+main:
+  steps:
+    # --- BRONZE LAYER ---
+    - bronze_humidity:
+        call: publish_and_wait
+        args:
+          path: "PS_Scripts/UploadDaily_ToHumidity.ps1"
+    - bronze_power:
+        call: publish_and_wait
+        args:
+          path: "PS_Scripts/UploadDaily_ToPowerConsumption.ps1"
+    - bronze_solar:
+        call: publish_and_wait
+        args:
+          path: "PS_Scripts/UploadDaily_ToSolarLogs.ps1"
+    - bronze_temp:
+        call: publish_and_wait
+        args:
+            path: "PS_Scripts/UploadDaily_ToTemperature.ps1"
+    
+    - bronze_weather:
+        call: publish_and_wait
+        args:
+          path: "Python_Scripts/Extract_WeatherForecast.py"
+    # --- SILVER LAYER ---
+    - silver_humidity:
+        call: publish_and_wait
+        args:
+          path: "Python_Scripts/Bronze_to_Silver_Scripts/HumidityToSilver.py"
+    - silver_power:
+        call: publish_and_wait
+        args:
+            path: "Python_Scripts/Bronze_to_Silver_Scripts/PowerConsumptionToSilver.py"
+    - silver_logs:
+        call: publish_and_wait
+        args:
+            path: "Python_Scripts/Bronze_to_Silver_Scripts/SolarlogsToSilver.py"
+    - silver_solar:
+        call: publish_and_wait
+        args:
+            path: "Python_Scripts/Bronze_to_Silver_Scripts/SolarProductionToSilver.py"
+    - silver_temp:
+        call: publish_and_wait
+        args:
+            path: "Python_Scripts/Bronze_to_Silver_Scripts/TemperatureToSilver.py"
+    - silver_weather:
+        call: publish_and_wait
+        args:
+            path: "Python_Scripts/Bronze_to_Silver_Scripts/WeatherToSilver.py"
+
+    # --- GOLD LAYER ---
+    - gold_main:
+        call: publish_and_wait
+        args:
+          path: "gold-layer-etl/etl/main.py"
+
+publish_and_wait:
+  params: [path]
+  steps:
+    - create_callback:
+        call: events.create_callback_endpoint
+        args:
+            http_callback_method: "POST"
+        result: callback_details
+    - send_command:
+        call: googleapis.pubsub.v1.projects.topics.publish
+        args:
+          topic: ${"projects/" + sys.get_env("GOOGLE_CLOUD_PROJECT_ID") + "/topics/vm-commands"}
+          body:
+            messages:
+              - attributes:
+                  script_path: ${path}
+                  callback_url: ${callback_details.url} # Send the URL to the VM
+    - wait_for_vm:
+        call: events.await_callback
+        args:
+            callback: ${callback_details}
+            timeout: 3600 # 1 hour max wait
+        result: callback_request
