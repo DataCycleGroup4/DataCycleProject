@@ -83,7 +83,7 @@ OPTIONS (description = 'Weather forecast dimension');
 -- DimRoom  (INT64 PK — no surrogate key by design)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimRoom` (
-  RoomID        INT64   NOT NULL,  -- Integer PK (natural key from source)
+  RoomID        STRING   NOT NULL,  -- Integer PK (natural key from source)
   Alt_RoomID    STRING,            -- Alternative / external room identifier
   FullName      STRING,            -- Full display name
   Alt_FullName  STRING             -- Alternative name (e.g. in another language)
@@ -205,7 +205,7 @@ CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.R
 
   -- Foreign keys
   TimeID         STRING  NOT NULL,  -- → DimTime.TimeID
-  RoomID         INT64   NOT NULL,  -- → DimRoom.RoomID
+  RoomID         STRING   NOT NULL,  -- → DimRoom.RoomID
   ReservationID  STRING,            -- → DimReservation.ReservationID | NULL = no booking
 
   -- Measures
