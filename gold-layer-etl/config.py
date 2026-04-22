@@ -12,7 +12,7 @@ RUN_DATE = os.environ.get(
 )
 
 SILVER_PATHS = {
-    "booking": "processed/cleanbellevuebooking/{month}/date={date}/",
+    "booking": "processed/cleanbellevuebooking/{month}/",
     "humidity": "processed/cleanbellevueconso/cleanhumidity/{month}/date={date}/",
     "powerconsumption": "processed/cleanbellevueconso/cleanpowerconsumption/{month}/date={date}/",
     "temperature": "processed/cleanbellevueconso/cleantemperature/{month}/date={date}/",
