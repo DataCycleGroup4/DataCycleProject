@@ -102,37 +102,6 @@ CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.D
 OPTIONS (description = 'Room reservation details dimension');
 
 
--- -----------------------------------------------------------------------------
--- DimConsumptionPrediction
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimConsumptionPrediction` (
-  Cons_PredictionID  STRING  NOT NULL,  -- UUID
-)
-OPTIONS (description = 'Consumption forecast/prediction dimension');
-
-
--- -----------------------------------------------------------------------------
--- DimProductionPredictionPac
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionPac` (
-  Prod_PredictionID  STRING  NOT NULL,  -- UUID
-  pred_date DATE NOT NULL,
-  pred_hour INT64 NOT NULL,
-  pred_mean_pac FLOAT64 NOT NULL
-)
-OPTIONS (description = 'Production forecast/prediction dimension');
-
--- -----------------------------------------------------------------------------
--- DimProductionPredictionDaysum
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionDaysum` (
-  Prod_PredictionID  STRING  NOT NULL,  -- UUID
-  pred_date DATE NOT NULL,
-  pred_hour INT64 NOT NULL,
-  pred_daysum FLOAT64 NOT NULL,
-)
-OPTIONS (description = 'Production forecast/prediction dimension');
-
 -- =============================================================================
 -- FACT TABLES
 -- =============================================================================
@@ -223,30 +192,28 @@ OPTIONS (description = 'Rooms fact table: room occupancy and reservation linkage
 
 
 -- -----------------------------------------------------------------------------
--- Prediction_FactTable
--- Grain: one row per prediction interval
+-- Prediction_FactTable (CLEANED: All KNIME floats directly in the Fact)
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Prediction_FactTable` (
+CREATE OR REPLACE TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Prediction_FactTable` (
   -- Surrogate PK
-  FactID             STRING  NOT NULL,  -- UUID generated at load time
+  FactID                     STRING  NOT NULL,  
 
-  -- Foreign keys
-  TimeID             STRING  NOT NULL,  -- → DimTime.TimeID
-  Cons_PredictionID  STRING  NOT NULL,  -- → DimConsumptionPrediction.Cons_PredictionID
-  Prod_PredictionIDPac  STRING  NOT NULL,  -- → DimProductionPrediction.Prod_PredictionID
-  Prod_PredictionIDDaysum STRING NOT NULL,
+  -- Foreign Keys
+  TimeID                     STRING  NOT NULL,  -- Links to DimTime
+  
+  -- If KNIME predicts per inverter, add InverterKey here. 
+  -- If it predicts for the whole site, you only need TimeID!
 
-  -- Measures
-  Predicted_ProductionPac   FLOAT64,  -- Forecast solar production for the interval (kWh)
-  Predicted_ProductionDaysum  FLOAT64,
-
-  Predicted_Consumption  FLOAT64,  -- Forecast energy consumption for the interval (kWh)
+  -- KNIME PREDICTIONS (Measures)
+  Predicted_ProductionPac    FLOAT64,  -- Forecasted active power
+  Predicted_ProductionDaysum FLOAT64,  -- Forecasted daily sum
+  Predicted_Consumption      FLOAT64,  -- Forecasted consumption
 
   -- Partition column
-  partition_date         DATE    NOT NULL
+  partition_date             DATE    NOT NULL
 )
 PARTITION BY partition_date
-OPTIONS (description = 'Prediction fact table: forecasted production and consumption per time interval');
+OPTIONS (description = 'Prediction fact table: KNIME forecasted production and consumption');
 
 
 -- =============================================================================
