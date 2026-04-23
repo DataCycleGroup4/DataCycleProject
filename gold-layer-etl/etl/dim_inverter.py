@@ -12,8 +12,11 @@ def load_dim_inverter(client, production_df, run_date):
 
     # 1. Deduplicate to get unique Inverters only
     # We only care about the ID and its static properties
-    unique_inverters = production_df[['inv_id', 'status']].drop_duplicates().copy()
+    # Change this line:
+    unique_inverters = production_df[['inv_id']].drop_duplicates().copy() 
 
+# And remove 'Status' from the dimension if it changes frequently; 
+# keep it in the Fact table instead.
     records = []
     for _, row in unique_inverters.iterrows():
         # Hash ONLY the Inverter ID so the key is permanent and unique

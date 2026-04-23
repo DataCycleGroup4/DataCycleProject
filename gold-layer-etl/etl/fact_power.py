@@ -42,17 +42,19 @@ def load_power_fact(client, production_df, consumption_df, run_date,
 
         # 3. Create Fact Record
         fid = hashlib.md5(f"pf_{run_date}_{t}_{row['inv_id']}".encode()).hexdigest()
-
+        # Inside the loop in fact_power.py
         records.append({
             "FactID": fid,
             "TimeID": time_id,
             "InverterKey": inv_key,
             "ConsumptionID": cons_id,
             "ErrorID": err_id,
+            "PAC": float(row["pac"]),         # Add this
+            "Daysum": float(row["daysum"]),   # Add this
+            "PDC1": float(row["pdc1"]),       # Add this
+            "UDC1": float(row["udc1"]),       # Add this
             "Prod_vs_Consumption_Diff": diff_kw,
             "Total_Production_End_of_Day": total_prod_eod_w / 1000,
-            "Total_Consumption_End_of_Day": total_cons_eod_w / 1000,
-            "Pct_Inverters_Running": running.get(t, 0.0),
             "partition_date": run_date
         })
 

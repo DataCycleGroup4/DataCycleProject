@@ -6,9 +6,11 @@ DATASET_ID = os.environ.get("BQ_DATASET", "DataCycle_Warehouse")
 BUCKET_NAME = os.environ.get("GCS_BUCKET", "data-cycle-lake")
 LOCATION = os.environ.get("BQ_LOCATION", "EU")
 
+# Calculate yesterday's date, then shift back 3 years to match the 2023 data
+yesterday = datetime.utcnow() - timedelta(days=1)
 RUN_DATE = os.environ.get(
     "RUN_DATE",
-    (datetime.utcnow() - timedelta(days=1)).strftime("%Y-%m-%d")
+    (yesterday - timedelta(days=3*365)).strftime("%Y-%m-%d")
 )
 
 SILVER_PATHS = {
