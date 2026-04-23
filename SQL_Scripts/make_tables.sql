@@ -242,14 +242,6 @@ ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimRoom`
 ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimReservation`
   ADD PRIMARY KEY (ReservationID) NOT ENFORCED;
 
-ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimConsumptionPrediction`
-  ADD PRIMARY KEY (Cons_PredictionID) NOT ENFORCED;
-
-ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionPac`
-  ADD PRIMARY KEY (Prod_PredictionID) NOT ENFORCED;
-
-ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionDaysum`
-  ADD PRIMARY KEY (Prod_PredictionID) NOT ENFORCED;
 
 -- Fact table PKs
 ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Power_FactTable`
@@ -281,7 +273,4 @@ ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Rooms_FactTable`
   ADD FOREIGN KEY (ReservationID) REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimReservation`(ReservationID) NOT ENFORCED;
 
 ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Prediction_FactTable`
-  ADD FOREIGN KEY (TimeID)            REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimTime`(TimeID)                               NOT ENFORCED,
-  ADD FOREIGN KEY (Cons_PredictionID) REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimConsumptionPrediction`(Cons_PredictionID)   NOT ENFORCED,
-  ADD FOREIGN KEY (Prod_PredictionIDPac) REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionPac`(Prod_PredictionID)    NOT ENFORCED,
-  ADD FOREIGN KEY (Prod_PredictionIDDaysum) REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionDaysum`(Prod_PredictionID)    NOT ENFORCED;
+  ADD FOREIGN KEY (TimeID)            REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimTime`(TimeID)                               NOT ENFORCED;
