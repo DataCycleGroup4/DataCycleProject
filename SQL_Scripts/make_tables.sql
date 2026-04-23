@@ -30,20 +30,14 @@ OPTIONS (description = 'Time dimension shared by all fact tables');
 
 
 -- -----------------------------------------------------------------------------
--- DimInverter  (UUID surrogate PK + INT64 natural key)
+-- DimInverter  (CLEANED: Surrogate PK + Natural Key Only)
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimInverter` (
-  InverterKey STRING  NOT NULL,  -- UUID surrogate PK
-  InverterID  INT64,             -- Natural/business key (inverter number)
-  PAC         FLOAT64,           -- Active power output (W)
-  Daysum      FLOAT64,           -- Total energy produced today (Wh)
-  PDC1        FLOAT64,           -- DC power input string 1
-  PDC2        FLOAT64,           -- DC power input string 2
-  UDC1        FLOAT64,           -- DC voltage string 1
-  UDC2        FLOAT64,           -- DC voltage string 2
-  Status      STRING             -- Operational status
+CREATE OR REPLACE TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimInverter` (
+  InverterKey STRING  NOT NULL,  -- UUID surrogate PK (Hash of inv_id)
+  InverterID  INT64              -- Natural/business key (inverter number)
+  -- If you ever get static data like "Manufacturer" or "Max_Capacity", it goes here.
 )
-OPTIONS (description = 'Solar inverter dimension with production metrics');
+OPTIONS (description = 'Solar inverter dimension (Static attributes only)');
 
 
 -- -----------------------------------------------------------------------------
@@ -144,28 +138,37 @@ OPTIONS (description = 'Production forecast/prediction dimension');
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- Power_FactTable
+-- -----------------------------------------------------------------------------
+-- Power_FactTable (UPDATED: Added live inverter metrics)
 -- Grain: one row per inverter reading per time interval
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Power_FactTable` (
+CREATE OR REPLACE TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Power_FactTable` (
   -- Surrogate PK
-  FactID                       STRING  NOT NULL,  -- UUID generated at load time
+  FactID                       STRING  NOT NULL,  
 
   -- Foreign keys
-  TimeID                       STRING  NOT NULL,  -- → DimTime.TimeID
-  ConsumptionID                STRING  NOT NULL,  -- → DimConsumption.ConsumptionID
-  InverterKey                  STRING  NOT NULL,  -- → DimInverter.InverterKey
-  ErrorID                      STRING,            -- → DimErrors.ErrorID | NULL = no error
+  TimeID                       STRING  NOT NULL,  
+  ConsumptionID                STRING  NOT NULL,  
+  InverterKey                  STRING  NOT NULL,  
+  ErrorID                      STRING,            
 
-  -- Measures
+  -- INVERTER LIVE MEASURES (Moved from DimInverter)
+  Status                       STRING,            -- Operational status at this time
+  PAC                          FLOAT64,           -- Active power output (W)
+  Daysum                       FLOAT64,           -- Total energy produced today (Wh)
+  PDC1                         FLOAT64,           -- DC power input string 1
+  PDC2                         FLOAT64,           -- DC power input string 2
+  UDC1                         FLOAT64,           -- DC voltage string 1
+  UDC2                         FLOAT64,           -- DC voltage string 2
+
+  -- AGGREGATED MEASURES
   Prod_vs_Consumption_Diff     FLOAT64,           -- Production minus consumption (kWh)
   Total_Production_End_of_Day  FLOAT64,           -- Cumulative production at day end (kWh)
   Total_Consumption_End_of_day FLOAT64,
   Pct_Inverters_Running        FLOAT64,           -- % of inverters active (0–100)
 
-
   -- Partition column
-  partition_date               DATE    NOT NULL   -- DATE(Year, Month, Day) from DimTime
+  partition_date               DATE    NOT NULL   
 )
 PARTITION BY partition_date
 OPTIONS (description = 'Power fact table: inverter production and energy consumption per time interval');
