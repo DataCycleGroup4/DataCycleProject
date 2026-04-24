@@ -10,7 +10,7 @@ SOURCE_FOLDERS = ["/Meteo/"]
 
 # --- GCS Config ---
 BUCKET_NAME = "data-cycle-lake"
-BASE_PREFIX = "raw/weatherforecast/" # Matches your screenshot
+BASE_PREFIX = "raw/weather/" # Matches your screenshot
 SERVICE_ACCOUNT_JSON = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
 
 def sync_sftp_to_lake():
