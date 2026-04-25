@@ -37,8 +37,8 @@ The scripts for bronze tier are:
 - /Python_Scripts/Extract_WeatherForecast.py
     - Uses the following variables to extract the data via SFTP
         - `SFTP_HOST = "10.130.25.152"`
-        - `SFTP_USER = "Student"`
-        - `SFTP_PASS = "3uw.AQ!SWxsDBm2zi3"`
+        - `SFTP_USER = ""`
+        - `SFTP_PASS = ""` nuh uh, no secrets
         - `SOURCE_FOLDERS = ["/Meteo/"]`
 
 Data is saved in the `data-cycle-lake/raw` in the subdirectories
