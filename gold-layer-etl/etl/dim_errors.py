@@ -15,13 +15,10 @@ def load_dim_errors(client, production_df, run_date):
         production_df["error"] = "0"
 
     # 1. Deduplicate to get only unique error messages/codes
-    # We strip out time and inverter so we only have the 'Definition' of the error
     error_series = production_df["error"].astype(str).unique()
 
     records = []
     for error_val in error_series:
-        # Hash ONLY the error message/code itself
-        # This ensures 'Error 404' always has the same ID forever
         eid = hashlib.md5(f"err_{error_val}".encode()).hexdigest()
         
         records.append({
@@ -33,11 +30,9 @@ def load_dim_errors(client, production_df, run_date):
     upsert_dim_table(client, TABLE_REF["DimErrors"], df_to_load, "ErrorID")
 
     # 2. Build the Lookup dictionary for fact_power.py
-    # This maps (time, inv_id) to the STATIC ErrorID
     lookup = {}
     for _, row in production_df.iterrows():
         error_val = str(row.get("error", "0"))
-        # Generate the same static hash used above
         eid = hashlib.md5(f"err_{error_val}".encode()).hexdigest()
         lookup[(row["time"], str(row["inv_id"]))] = eid
 
