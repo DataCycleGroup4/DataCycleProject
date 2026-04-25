@@ -21,19 +21,19 @@ We have the following data that needs extracting:
 We store the CSV and XLS versions of room bookings in bronze tier, but only use CSV later so don't move XLS to silver.
 
 The scripts for bronze tier are:
-- /PS_Scripts/UploadDaily_ToHumidity.ps1 
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `*-Humidity.csv`
-- /PS_Scripts/UploadDaily_ToPowerConsumption.ps1
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `*-Consumption.csv`
-- /PS_Scripts/UploadDaily_ToSolarlogs.ps1
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `*-\d{2}\.(\d{2}).\d{4}.csv` for historical data, and `^min\d{2}(\d{2})\d{2}`for current data
+- `/PS_Scripts/UploadDaily_ToHumidity.ps1 `
+    - Extracts data via SMB from address `\\10.130.25.15` that matches pattern `*-Humidity.csv`
+- `/PS_Scripts/UploadDaily_ToPowerConsumption.ps1`
+    - Extracts data via SMB from address `\\10.130.25.152` that matches pattern `*-Consumption.csv`
+- `/PS_Scripts/UploadDaily_ToSolarlogs.ps1`
+    - Extracts data via SMB from address `\\10.130.25.152` that matches pattern `*-\d{2}\.(\d{2}).\d{4}.csv` for historical data, and `^min\d{2}(\d{2})\d{2}`for current data
 
-- /PS_Scripts/UploadDaily_ToTemperature.ps1
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `*-Temperature.csv`
-- /PS_Scripts/UploadWeekly_ToBooking_CSV.ps1
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `RoomAllocations_\d{4}(\d{2}` but from files that end with .csv
-- /PS_Scripts/UploadWeekly_ToBooking_XLS.ps1
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `RoomAllocations_\d{4}(\d{2}` but from files that end with .xls
+- `/PS_Scripts/UploadDaily_ToTemperature.ps1`
+    - Extracts data via SMB from address `\\10.130.25.152` that matches pattern `*-Temperature.csv`
+- `/PS_Scripts/UploadWeekly_ToBooking_CSV.ps1`
+    - Extracts data via SMB from address `\\10.130.25.152` that matches pattern `RoomAllocations_\d{4}(\d{2}` but from files that end with .csv
+- `/PS_Scripts/UploadWeekly_ToBooking_XLS.ps1`
+    - Extracts data via SMB from address `\\10.130.25.152` that matches pattern `RoomAllocations_\d{4}(\d{2}` but from files that end with .xls
 - /Python_Scripts/Extract_WeatherForecast.py
     - Uses the following variables to extract the data via SFTP
         - `SFTP_HOST = "10.130.25.152"`
