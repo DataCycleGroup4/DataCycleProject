@@ -25,8 +25,7 @@ def load_dim_inverter(client, production_df, run_date):
         
         records.append({
             "InverterKey": inv_key,
-            "InverterID": int(row["inv_id"]),
-            "Status": str(row["status"])
+            "InverterID": int(row["inv_id"])
             # Note: PAC, Daysum, PDC are MEASURES, they belong in the Fact table, not here.
         })
 

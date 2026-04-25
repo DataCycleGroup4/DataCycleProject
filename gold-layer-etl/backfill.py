@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 
 # --- CONFIGURATION ---
 # Adjust these to your desired backfill range
-start_date = datetime(2023, 1, 1)
-end_date   = datetime(2023, 6, 1)
+start_date = datetime(2023, 4, 26)
+end_date   = datetime(2023, 4, 30)
 # ---------------------
 
 dates = []

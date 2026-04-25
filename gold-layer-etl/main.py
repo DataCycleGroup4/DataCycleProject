@@ -27,6 +27,10 @@ def collect_timestamps(run_date, *dataframes_with_time_col):
     for df, time_col in dataframes_with_time_col:
         if df.empty:
             continue
+
+        if time_col not in df.columns:
+            logger.warning(f"Column '{time_col}' missing from dataframe. Skipping timestamp collection.")
+            continue
         for _, row in df.iterrows():
             t = str(row[time_col])
             parts = t.split(":")
@@ -48,14 +52,22 @@ def main():
     temp_df = read_parquet_from_gcs(BUCKET_NAME, resolve_silver_path(SILVER_PATHS["temperature"], run_date))
     production_df = read_parquet_from_gcs(BUCKET_NAME, resolve_silver_path(SILVER_PATHS["production"], run_date))
     weather_df = read_parquet_from_gcs(BUCKET_NAME, resolve_silver_path(SILVER_PATHS["weather"], run_date))
+# --- Safe Debug Prints ---
+    if not weather_df.empty and "time" in weather_df.columns:
+        print("weather times:", weather_df["time"].head(5).tolist())
+    else:
+        logger.warning(f"Weather data is empty or missing 'time' for {run_date}")
 
-    print("weather times:", weather_df["time"].head(5).tolist())
-    print("humidity times:", humidity_df["time"].head(5).tolist())
-    print("temp times:", temp_df["time"].head(5).tolist())
+    if not humidity_df.empty and "time" in humidity_df.columns:
+        print("humidity times:", humidity_df["time"].head(5).tolist())
+    else:
+        logger.warning(f"Humidity data is empty or missing 'time' for {run_date}")
 
-    if all(df.empty for df in [booking_df, consumption_df, humidity_df, temp_df, production_df, weather_df]):
-        logger.warning(f"No data found for {run_date}. Exiting.")
-        return
+    if not temp_df.empty and "time" in temp_df.columns:
+        print("temp times:", temp_df["time"].head(5).tolist())
+    else:
+        logger.warning(f"Temp data is empty or missing 'time' for {run_date}")
+    # -------------------------
 
     # 2. Build DimTime from all timestamps
     logger.info("Building DimTime...")

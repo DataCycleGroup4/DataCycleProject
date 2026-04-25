@@ -10,6 +10,10 @@ def load_dim_errors(client, production_df, run_date):
     if production_df.empty:
         return {}
 
+    if "error" not in production_df.columns:
+        logger.warning(f"Column 'error' missing on {run_date}. Defaulting to '0'.")
+        production_df["error"] = "0"
+
     # 1. Deduplicate to get only unique error messages/codes
     # We strip out time and inverter so we only have the 'Definition' of the error
     error_series = production_df["error"].astype(str).unique()
