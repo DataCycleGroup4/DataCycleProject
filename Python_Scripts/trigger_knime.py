@@ -35,7 +35,7 @@ def trigger_knime_prediction():
     payload = {}
 
     try:
-        print(f"🚀 Initializing KNIME Prediction for Deployment...")
+        print(f"Initializing KNIME Prediction for Deployment...")
         
         response = requests.post(
             DEPLOYMENT_URL, 

@@ -54,6 +54,11 @@ main:
         args:
           path: "gold-layer-etl/etl/main.py"
 
+    - knime_prediction:
+        call: publish_and_wait
+        args:
+          path: "Python_Scripts/trigger_knime.py"
+
 publish_and_wait:
   params: [path]
   steps:
