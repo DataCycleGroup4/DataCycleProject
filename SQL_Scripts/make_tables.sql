@@ -30,20 +30,14 @@ OPTIONS (description = 'Time dimension shared by all fact tables');
 
 
 -- -----------------------------------------------------------------------------
--- DimInverter  (UUID surrogate PK + INT64 natural key)
+-- DimInverter  (CLEANED: Surrogate PK + Natural Key Only)
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimInverter` (
-  InverterKey STRING  NOT NULL,  -- UUID surrogate PK
-  InverterID  INT64,             -- Natural/business key (inverter number)
-  PAC         FLOAT64,           -- Active power output (W)
-  Daysum      FLOAT64,           -- Total energy produced today (Wh)
-  PDC1        FLOAT64,           -- DC power input string 1
-  PDC2        FLOAT64,           -- DC power input string 2
-  UDC1        FLOAT64,           -- DC voltage string 1
-  UDC2        FLOAT64,           -- DC voltage string 2
-  Status      STRING             -- Operational status
+CREATE OR REPLACE TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimInverter` (
+  InverterKey STRING  NOT NULL,  -- UUID surrogate PK (Hash of inv_id)
+  InverterID  INT64              -- Natural/business key (inverter number)
+  -- If you ever get static data like "Manufacturer" or "Max_Capacity", it goes here.
 )
-OPTIONS (description = 'Solar inverter dimension with production metrics');
+OPTIONS (description = 'Solar inverter dimension (Static attributes only)');
 
 
 -- -----------------------------------------------------------------------------
@@ -83,7 +77,7 @@ OPTIONS (description = 'Weather forecast dimension');
 -- DimRoom  (INT64 PK — no surrogate key by design)
 -- -----------------------------------------------------------------------------
 CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimRoom` (
-  RoomID        INT64   NOT NULL,  -- Integer PK (natural key from source)
+  RoomID        STRING   NOT NULL,  -- Integer PK (natural key from source)
   Alt_RoomID    STRING,            -- Alternative / external room identifier
   FullName      STRING,            -- Full display name
   Alt_FullName  STRING             -- Alternative name (e.g. in another language)
@@ -108,64 +102,42 @@ CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.D
 OPTIONS (description = 'Room reservation details dimension');
 
 
--- -----------------------------------------------------------------------------
--- DimConsumptionPrediction
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimConsumptionPrediction` (
-  Cons_PredictionID  STRING  NOT NULL,  -- UUID
-)
-OPTIONS (description = 'Consumption forecast/prediction dimension');
-
-
--- -----------------------------------------------------------------------------
--- DimProductionPredictionPac
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionPac` (
-  Prod_PredictionID  STRING  NOT NULL,  -- UUID
-  pred_date DATE NOT NULL,
-  pred_hour INT64 NOT NULL,
-  pred_mean_pac FLOAT64 NOT NULL
-)
-OPTIONS (description = 'Production forecast/prediction dimension');
-
--- -----------------------------------------------------------------------------
--- DimProductionPredictionDaysum
--- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionDaysum` (
-  Prod_PredictionID  STRING  NOT NULL,  -- UUID
-  pred_date DATE NOT NULL,
-  pred_hour INT64 NOT NULL,
-  pred_daysum FLOAT64 NOT NULL,
-)
-OPTIONS (description = 'Production forecast/prediction dimension');
-
 -- =============================================================================
 -- FACT TABLES
 -- =============================================================================
 
 -- -----------------------------------------------------------------------------
--- Power_FactTable
+-- -----------------------------------------------------------------------------
+-- Power_FactTable (UPDATED: Added live inverter metrics)
 -- Grain: one row per inverter reading per time interval
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Power_FactTable` (
+CREATE OR REPLACE TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Power_FactTable` (
   -- Surrogate PK
-  FactID                       STRING  NOT NULL,  -- UUID generated at load time
+  FactID                       STRING  NOT NULL,  
 
   -- Foreign keys
-  TimeID                       STRING  NOT NULL,  -- → DimTime.TimeID
-  ConsumptionID                STRING  NOT NULL,  -- → DimConsumption.ConsumptionID
-  InverterKey                  STRING  NOT NULL,  -- → DimInverter.InverterKey
-  ErrorID                      STRING,            -- → DimErrors.ErrorID | NULL = no error
+  TimeID                       STRING  NOT NULL,  
+  ConsumptionID                STRING  NOT NULL,  
+  InverterKey                  STRING  NOT NULL,  
+  ErrorID                      STRING,            
 
-  -- Measures
+  -- INVERTER LIVE MEASURES (Moved from DimInverter)
+  Status                       STRING,            -- Operational status at this time
+  PAC                          FLOAT64,           -- Active power output (W)
+  Daysum                       FLOAT64,           -- Total energy produced today (Wh)
+  PDC1                         FLOAT64,           -- DC power input string 1
+  PDC2                         FLOAT64,           -- DC power input string 2
+  UDC1                         FLOAT64,           -- DC voltage string 1
+  UDC2                         FLOAT64,           -- DC voltage string 2
+
+  -- AGGREGATED MEASURES
   Prod_vs_Consumption_Diff     FLOAT64,           -- Production minus consumption (kWh)
   Total_Production_End_of_Day  FLOAT64,           -- Cumulative production at day end (kWh)
   Total_Consumption_End_of_day FLOAT64,
   Pct_Inverters_Running        FLOAT64,           -- % of inverters active (0–100)
 
-
   -- Partition column
-  partition_date               DATE    NOT NULL   -- DATE(Year, Month, Day) from DimTime
+  partition_date               DATE    NOT NULL   
 )
 PARTITION BY partition_date
 OPTIONS (description = 'Power fact table: inverter production and energy consumption per time interval');
@@ -205,7 +177,7 @@ CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.R
 
   -- Foreign keys
   TimeID         STRING  NOT NULL,  -- → DimTime.TimeID
-  RoomID         INT64   NOT NULL,  -- → DimRoom.RoomID
+  RoomID         STRING   NOT NULL,  -- → DimRoom.RoomID
   ReservationID  STRING,            -- → DimReservation.ReservationID | NULL = no booking
 
   -- Measures
@@ -220,30 +192,28 @@ OPTIONS (description = 'Rooms fact table: room occupancy and reservation linkage
 
 
 -- -----------------------------------------------------------------------------
--- Prediction_FactTable
--- Grain: one row per prediction interval
+-- Prediction_FactTable (CLEANED: All KNIME floats directly in the Fact)
 -- -----------------------------------------------------------------------------
-CREATE TABLE IF NOT EXISTS `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Prediction_FactTable` (
+CREATE OR REPLACE TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Prediction_FactTable` (
   -- Surrogate PK
-  FactID             STRING  NOT NULL,  -- UUID generated at load time
+  FactID                     STRING  NOT NULL,  
 
-  -- Foreign keys
-  TimeID             STRING  NOT NULL,  -- → DimTime.TimeID
-  Cons_PredictionID  STRING  NOT NULL,  -- → DimConsumptionPrediction.Cons_PredictionID
-  Prod_PredictionIDPac  STRING  NOT NULL,  -- → DimProductionPrediction.Prod_PredictionID
-  Prod_PredictionIDDaysum STRING NOT NULL,
+  -- Foreign Keys
+  TimeID                     STRING  NOT NULL,  -- Links to DimTime
+  
+  -- If KNIME predicts per inverter, add InverterKey here. 
+  -- If it predicts for the whole site, you only need TimeID!
 
-  -- Measures
-  Predicted_ProductionPac   FLOAT64,  -- Forecast solar production for the interval (kWh)
-  Predicted_ProductionDaysum  FLOAT64,
-
-  Predicted_Consumption  FLOAT64,  -- Forecast energy consumption for the interval (kWh)
+  -- KNIME PREDICTIONS (Measures)
+  Predicted_ProductionPac    FLOAT64,  -- Forecasted active power
+  Predicted_ProductionDaysum FLOAT64,  -- Forecasted daily sum
+  Predicted_Consumption      FLOAT64,  -- Forecasted consumption
 
   -- Partition column
-  partition_date         DATE    NOT NULL
+  partition_date             DATE    NOT NULL
 )
 PARTITION BY partition_date
-OPTIONS (description = 'Prediction fact table: forecasted production and consumption per time interval');
+OPTIONS (description = 'Prediction fact table: KNIME forecasted production and consumption');
 
 
 -- =============================================================================
@@ -272,14 +242,6 @@ ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimRoom`
 ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimReservation`
   ADD PRIMARY KEY (ReservationID) NOT ENFORCED;
 
-ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimConsumptionPrediction`
-  ADD PRIMARY KEY (Cons_PredictionID) NOT ENFORCED;
-
-ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionPac`
-  ADD PRIMARY KEY (Prod_PredictionID) NOT ENFORCED;
-
-ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionDaysum`
-  ADD PRIMARY KEY (Prod_PredictionID) NOT ENFORCED;
 
 -- Fact table PKs
 ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Power_FactTable`
@@ -311,7 +273,4 @@ ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Rooms_FactTable`
   ADD FOREIGN KEY (ReservationID) REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimReservation`(ReservationID) NOT ENFORCED;
 
 ALTER TABLE `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.Prediction_FactTable`
-  ADD FOREIGN KEY (TimeID)            REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimTime`(TimeID)                               NOT ENFORCED,
-  ADD FOREIGN KEY (Cons_PredictionID) REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimConsumptionPrediction`(Cons_PredictionID)   NOT ENFORCED,
-  ADD FOREIGN KEY (Prod_PredictionIDPac) REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionPac`(Prod_PredictionID)    NOT ENFORCED,
-  ADD FOREIGN KEY (Prod_PredictionIDDaysum) REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimProductionPredictionDaysum`(Prod_PredictionID)    NOT ENFORCED;
+  ADD FOREIGN KEY (TimeID)            REFERENCES `project-d31bc18d-8d9f-48db-a77.DataCycle_Warehouse.DimTime`(TimeID)                               NOT ENFORCED;

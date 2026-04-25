@@ -1,7 +1,6 @@
 import pandas as pd
 import gcsfs
 import csv
-import os
 
 # 1. Configuration
 SERVICE_ACCOUNT_KEY = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
@@ -22,112 +21,103 @@ except Exception as e:
     print(f"Auth failed: {e}")
     exit()
 
-for month in range(1, 13):
-    month_str = str(month).zfill(2)
-    bronze_glob = f"{BRONZE_BASE}/{month_str}/*.csv*"
-    
-    try:
-        files = fs.glob(bronze_glob)
-        if not files:
-            continue
-        
-        print(f"--- Processing Month {month_str} ---")
-        
-        # Clear the target month directory once before starting the file loop
-        target_month_dir = f"{SILVER_BASE}/{month_str}"
-        if fs.exists(target_month_dir):
-            fs.rm(target_month_dir, recursive=True)
+# 2. Find the single most recent file across all month folders
+all_files = fs.glob(f"{BRONZE_BASE}/**/*.csv*")
+if not all_files:
+    print("No files found in bronze layer.")
+    exit()
 
-        for f in files:
-            # Extract filename without extension (e.g., RoomAllocations_20230304)
-            file_name = f.split('/')[-1].split('.')[0]
-            full_path = f if f.startswith('gs://') else f"gs://{f}"
-            
-            with fs.open(full_path, mode='rb') as open_file:
-                df = pd.read_csv(
-                    open_file, 
-                    sep='\t', 
-                    engine='python',
-                    quoting=csv.QUOTE_NONE,
-                    encoding='utf-8-sig', 
-                    on_bad_lines='skip'
-                )
-            
-            if df.empty:
-                continue
+latest_file = sorted(all_files)[-1]
+print(f"Using latest file: {latest_file}")
 
-            # 2. Cleanup Headers and Values
-            df.columns = [c.strip().replace('"', '') for c in df.columns]
-            
-            # Vectorized cleaning for string columns only
-            str_cols = df.select_dtypes(include=['object']).columns
-            for col in str_cols:
-                df[col] = df[col].astype(str).str.replace('"', '', regex=False).str.strip()
+# 3. Read it
+full_path = latest_file if latest_file.startswith('gs://') else f"gs://{latest_file}"
+with fs.open(full_path, mode='rb') as open_file:
+    df = pd.read_csv(
+        open_file,
+        sep='\t',
+        engine='python',
+        quoting=csv.QUOTE_NONE,
+        encoding='utf-8-sig',
+        on_bad_lines='skip'
+    )
 
-            # 3. Rename Columns
-            df = df.rename(columns={
-                'Nom': 'room_id',
-                'Nom Entier': 'room_name',
-                'Date': 'raw_date',
-                'Date de début': 'start_time',
-                'Date de fin': 'end_time',
-                'Rés.-no': 'reservation_id',
-                'Type de réservation': 'reservation_type',
-                'Codes': 'reservation_code',
-                'Nom de l\'utilisateur': 'reserved_by',
-                'Sigle de salle remplacée': 'alt_room_id',
-                'Nom entier de la salle remplacée': 'alt_room_name',
-                'Classe': 'class',
-                'Activité': 'activity_type',
-                'Professeur': 'instructor',
-                'Division': 'department',
-                'Poste de dépenses': 'expense_category',
-                'Remarque': 'remarks',
-                'Annotation': 'comments'
-            })
+if df.empty:
+    print("File is empty.")
+    exit()
 
-            # 4. Handle Placeholders
-            cols_to_fill = [
-                'room_id', 'instructor', 'department', 'activity_type', 
-                'reservation_type', 'reservation_code', 'reserved_by', 
-                'alt_room_id', 'class', 'expense_category', 'remarks', 'comments'
-            ]
-            for col in cols_to_fill:
-                if col in df.columns:
-                    df[col] = df[col].replace(['nan', 'None', ''], "EMPTY").fillna("EMPTY")
+# 4. Cleanup Headers and Values
+df.columns = [c.strip().replace('"', '') for c in df.columns]
+str_cols = df.select_dtypes(include=['object']).columns
+for col in str_cols:
+    df[col] = df[col].astype(str).str.replace('"', '', regex=False).str.strip()
 
-            # 5. Date Transformation
-            if 'raw_date' in df.columns:
-                # Efficient replacement of all months at once
-                for fr, en in french_months.items():
-                    df['raw_date'] = df['raw_date'].str.replace(fr, en, regex=False)
-                
-                df['date_dt'] = pd.to_datetime(df['raw_date'], format='%d %b %Y', errors='coerce')
-                df['date_dt'] = df['date_dt'].fillna(pd.Timestamp('1900-01-01'))
-                df['date'] = df['date_dt'].dt.date.astype(str)
+# 5. Rename Columns
+df = df.rename(columns={
+    'Nom': 'room_id',
+    'Nom Entier': 'room_name',
+    'Date': 'raw_date',
+    'Date de début': 'start_time',
+    'Date de fin': 'end_time',
+    'Rés.-no': 'reservation_id',
+    'Type de réservation': 'reservation_type',
+    'Codes': 'reservation_code',
+    'Nom de l\'utilisateur': 'reserved_by',
+    'Sigle de salle remplacée': 'alt_room_id',
+    'Nom entier de la salle remplacée': 'alt_room_name',
+    'Classe': 'class',
+    'Activité': 'activity_type',
+    'Professeur': 'instructor',
+    'Division': 'department',
+    'Poste de dépenses': 'expense_category',
+    'Remarque': 'remarks',
+    'Annotation': 'comments'
+})
 
-            # 6. Select Columns and Write
-            cols_to_keep = [
-                'date', 'room_id', 'start_time', 'end_time', 'reservation_id', 
-                'reservation_type', 'reservation_code', 'reserved_by', 'alt_room_id', 
-                'activity_type', 'instructor', 'department', 'class', 
-                'expense_category', 'remarks', 'comments'
-            ]
-            existing_cols = [c for c in cols_to_keep if c in df.columns]
-            final_df = df[existing_cols].copy()
+# 6. Handle Placeholders
+cols_to_fill = [
+    'room_id', 'instructor', 'department', 'activity_type',
+    'reservation_type', 'reservation_code', 'reserved_by',
+    'alt_room_id', 'class', 'expense_category', 'remarks', 'comments'
+]
+for col in cols_to_fill:
+    if col in df.columns:
+        df[col] = df[col].replace(['nan', 'None', ''], "EMPTY").fillna("EMPTY")
 
-            # Save as a single Parquet file (No partitioning by date folder)
-            target_file_path = f"{target_month_dir}/{file_name}.parquet"
-            
-            final_df.to_parquet(
-                target_file_path,
-                engine='pyarrow',
-                index=False,
-                storage_options={"token": SERVICE_ACCOUNT_KEY}
-            )
-            print(f"  + Processed: {file_name}.parquet")
-            
-    except Exception as e:
-        print(f"  !! Fatal Error in Month {month_str}: {e}")
+# 7. Date Transformation
+if 'raw_date' in df.columns:
+    for fr, en in french_months.items():
+        df['raw_date'] = df['raw_date'].str.replace(fr, en, regex=False)
+    df['date_dt'] = pd.to_datetime(df['raw_date'], format='%d %b %Y', errors='coerce')
+    df['date_dt'] = df['date_dt'].fillna(pd.Timestamp('1900-01-01'))
+    df['date'] = df['date_dt'].dt.date.astype(str)
 
-print("\n--- Process Complete ---")
+# 8. Select Columns
+cols_to_keep = [
+    'date', 'room_id', 'start_time', 'end_time', 'reservation_id',
+    'reservation_type', 'reservation_code', 'reserved_by', 'alt_room_id',
+    'activity_type', 'instructor', 'department', 'class',
+    'expense_category', 'remarks', 'comments'
+]
+existing_cols = [c for c in cols_to_keep if c in df.columns]
+final_df = df[existing_cols].copy()
+
+# 9. Clear entire silver booking layer and rewrite
+if fs.exists(SILVER_BASE):
+    print("Clearing existing silver layer...")
+    fs.rm(SILVER_BASE, recursive=True)
+
+# Partition by month for efficient querying
+final_df['month'] = pd.to_datetime(final_df['date']).dt.strftime('%m')
+for month_str, month_df in final_df.groupby('month'):
+    month_df = month_df.drop(columns=['month'])
+    target_file = f"{SILVER_BASE}/{month_str}/RoomAllocations_latest.parquet"
+    month_df.to_parquet(
+        target_file,
+        engine='pyarrow',
+        index=False,
+        storage_options={"token": SERVICE_ACCOUNT_KEY}
+    )
+    print(f"  + Written: {month_str}/RoomAllocations_latest.parquet ({len(month_df)} rows)")
+
+print("\n--- Silver Layer Complete ---")

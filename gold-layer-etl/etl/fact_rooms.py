@@ -6,50 +6,70 @@ from utils.bq_writer import append_fact_table
 
 logger = logging.getLogger(__name__)
 
+def _normalize_time(t) -> str:
+    """Ensures time is always HH:MM:SS."""
+    s = str(t).strip()
+    parts = s.split(":")
+    if len(parts) == 2: s = f"{s}:00"
+    if len(parts) == 1: s = f"{s.zfill(2)}:00:00"
+    return s.zfill(8)
+
 def load_rooms_fact(client, booking_df, run_date, time_lookup, room_lookup, reservation_lookup):
-    if booking_df.empty:
+    # 1. FILTER: Since Silver files are weekly/monthly, we must extract only today's data
+    day_df = booking_df[booking_df["date"] == run_date].copy()
+    
+    if day_df.empty:
+        logger.warning(f"No booking data found for date {run_date} in the provided files.")
         return 0
 
     y, m, d = (int(x) for x in run_date.split("-"))
-    total_rooms_in_system = len(room_lookup) # Total rooms known to the dimension
-
+    total_rooms = len(room_lookup)
     records = []
-    for time_str, group in booking_df.groupby("start_time"):
-        parts = time_str.split(":")
-        h, mi = int(parts[0]), int(parts[1])
-        s = 0 # Defaulting to 0 to match DimTime's grain
+
+    # 2. GROUPING: Grouping by start_time is correct for a Galaxy Schema snapshot
+    for time_str, group in day_df.groupby("start_time"):
+        norm_t = _normalize_time(time_str)
+        parts = norm_t.split(":")
+        h, mi, s = int(parts[0]), int(parts[1]), int(parts[2])
         
-        # 1. Lookup the IDs
-        time_id = time_lookup.get((y, m, d, h, mi, s), "")
+        # Consistent lookup with dim_time.py
+        time_id = time_lookup.get((y, m, d, h, mi, s)) 
         
         booked_count = group["room_id"].nunique()
-        pct_booked = booked_count / total_rooms_in_system if total_rooms_in_system > 0 else 0
-        free_count = total_rooms_in_system - booked_count
+        pct_booked = booked_count / total_rooms if total_rooms > 0 else 0
+        free_count = total_rooms - booked_count
 
         for _, row in group.iterrows():
-            # Match the room ID from our stable dim_room (MD5 hex)
-            rid = room_lookup.get(str(row["room_id"]), "")
+            rid = room_lookup.get(str(row["room_id"]))
             
-            # Match the reservation key exactly as defined in dim_reservation lookup
+            # Lookup key matches the dictionary key in dim_reservation.py
             rkey = f"{row['reservation_id']}_{row.get('start_time','')}"
-            resid = reservation_lookup.get(rkey, "")
+            resid = reservation_lookup.get(rkey)
 
-            # Unique Fact ID
-            fid_raw = f"rf_{run_date}_{time_str}_{row['room_id']}_{row['reservation_id']}"
+            # 3. INTEGRITY CHECK: Critical because TimeID and RoomID are REQUIRED in BQ
+            if not time_id or not rid:
+                logger.error(f"SKIPPING ROW: Missing ID for Room:{row['room_id']} or Time:{norm_t}")
+                continue
+
+            # Create FactID
+            fid_raw = f"rf_{run_date}_{norm_t}_{row['room_id']}_{row['reservation_id']}"
             fid = hashlib.md5(fid_raw.encode()).hexdigest()
 
             records.append({
                 "FactID": fid, 
                 "TimeID": time_id, 
                 "RoomID": rid,
-                "ReservationID": resid, 
+                "ReservationID": resid if resid else "", 
                 "Pct_Rooms_Booked": float(pct_booked),
                 "Rooms_Free_Count": int(free_count), 
                 "partition_date": run_date
             })
 
+    logger.info(f"[DIAG] Built {len(records)} room fact records for {run_date}")
+
+    if not records:
+        return 0
+
     df = pd.DataFrame(records)
-    if not df.empty:
-        df["partition_date"] = pd.to_datetime(df["partition_date"]).dt.date
-        
+    df["partition_date"] = pd.to_datetime(df["partition_date"]).dt.date
     return append_fact_table(client, TABLE_REF["Rooms_FactTable"], df, run_date)

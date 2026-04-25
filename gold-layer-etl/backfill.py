@@ -3,8 +3,8 @@ from datetime import datetime, timedelta
 
 # --- CONFIGURATION ---
 # Adjust these to your desired backfill range
-start_date = datetime(2023, 1, 1)
-end_date   = datetime(2023, 1, 2)
+start_date = datetime(2023, 4, 26)
+end_date   = datetime(2023, 4, 30)
 # ---------------------
 
 dates = []
@@ -38,7 +38,7 @@ for i, run_date in enumerate(dates, 1):
         # Run main.py
         result = subprocess.run(
             [sys.executable, main_script],
-            capture_output=False, text=True, timeout=3600
+            capture_output=True, text=True, timeout=3600
         )
         
         elapsed = time.time() - start

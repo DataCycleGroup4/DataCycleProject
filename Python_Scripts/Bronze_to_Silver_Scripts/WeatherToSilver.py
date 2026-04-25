@@ -11,10 +11,10 @@ SILVER_BASE = f"gs://{BUCKET}/processed/cleanweather"
 try:
     fs = gcsfs.GCSFileSystem(token=SERVICE_ACCOUNT_KEY)
     print("------------------------------------------")
-    print("✓ Authenticated successfully with GCS.")
+    print("Authenticated successfully with GCS.")
     print("------------------------------------------")
 except Exception as e:
-    print(f"✗ Auth failed: {e}")
+    print(f"Auth failed: {e}")
     exit()
 
 for month in range(1, 13):
@@ -26,7 +26,7 @@ for month in range(1, 13):
     try:
         files = fs.glob(bronze_glob)
         if not files:
-            print(f"  ! No files found in {bronze_glob}. Skipping.")
+            print(f" No files found in {bronze_glob}. Skipping.")
             continue
         
         print(f"  + Found {len(files)} files. Starting ingestion...")
@@ -52,10 +52,10 @@ for month in range(1, 13):
                     print(f"    - Processed {i + 1}/{len(files)} files...")
                     
             except Exception as read_e:
-                print(f"    ! Error reading {f}: {read_e}")
+                print(f"  Error reading {f}: {read_e}")
         
         if not df_list:
-            print(f"  ! All files in Month {month_str} were empty or unreadable.")
+            print(f" All files in Month {month_str} were empty or unreadable.")
             continue
             
         df = pd.concat(df_list, ignore_index=True)
@@ -79,7 +79,7 @@ for month in range(1, 13):
         df_cleaned = df[mask].copy()
 
         if df_cleaned.empty:
-            print(f"  ! Month {month_str}: No valid data survived the filters.")
+            print(f"Month {month_str}: No valid data survived the filters.")
             continue
 
         df_cleaned['date_partition'] = df_cleaned['time_dt'].dt.date.astype(str)
@@ -104,9 +104,9 @@ for month in range(1, 13):
             partition_cols=['date_partition'],
             storage_options={"token": SERVICE_ACCOUNT_KEY}
         )
-        print(f"✓ Month {month_str} complete.")
+        print(f"Month {month_str} cwoomplete.")
 
     except Exception as e:
-        print(f"✗ Critical Error in Month {month_str}: {e}")
+        print(f"Critical Error in Month {month_str}: {e}")
 
 print("\n--- Silver Layer Process Complete ---")
