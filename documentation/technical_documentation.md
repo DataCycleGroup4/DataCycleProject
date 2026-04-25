@@ -8,7 +8,7 @@ The workflow is orchestrated by a GCP Cloud Workflow, which runs the `dailyworkf
 
 
 # Bronze tier
-This tier involves extracting the raw data via SMB and SSH and storing it in our data lake.
+This tier involves extracting the raw data via SMB and SFTP and storing it in our data lake.
 We have the following data that needs extracting:
 
 - Solar panel production data
@@ -130,7 +130,7 @@ In order for the workflow to able to execute the tasks on the Windows VM, the VM
 
 # Knime
 
-This solution includes a Knime workflow that reads data from the `data-cycle-lae` bucket in GCP, and predicts the next day's consumption & production data with Random Forest models.
+This solution includes a Knime workflow that reads data from the `data-cycle-lake` bucket in GCP, and predicts the next day's consumption & production data with Random Forest models.
 ![Knime workflow](/Workflow.png)
 
 ## Explanation
