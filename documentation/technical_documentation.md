@@ -1,10 +1,18 @@
 # Technical Documentation
 This project provides an end-to-end data analytics solution.
 
+![Solution architecture](/pictures/Group4.drawio.png)
+
+
 Data is saved in the Google Cloud Platform and a Windows Client virtual machine is used to execute scripts.
 This solution uses a medallion architecture pattern. Bronze and silver tier storage is in a GCP cloud storage bucket called `data-cycle-lake` and gold tier storage is in a data warehouse in GCP BigQuery called `DataCycle_Warehouse`.
 
 The workflow is orchestrated by a GCP Cloud Workflow, which runs the `dailyworkflow.yml`file you can find in the root directory of this repository
+
+![Solution architecture](/pictures/ArchitectureDataCycle.drawio.png)
+
+![Solution architecture](/pictures/StarSchemaDataCycle.drawio.png)
+
 
 
 # Bronze tier
@@ -131,7 +139,7 @@ In order for the workflow to able to execute the tasks on the Windows VM, the VM
 # Knime
 
 This solution includes a Knime workflow that reads data from the `data-cycle-lake` bucket in GCP, and predicts the next day's consumption & production data with Random Forest models.
-![Knime workflow](/Workflow.png)
+![Knime workflow](/pictures/Workflow.png)
 
 ## Explanation
 The workflow begins by connecting to our GCP service account via credentials generated and stored in a .json file saved in the same private space as the workflow. We then connect to our storage bucket, from which the flow moves into 5 parallel loops to read:
