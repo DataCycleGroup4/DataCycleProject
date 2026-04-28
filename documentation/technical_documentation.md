@@ -1,9 +1,6 @@
 # Technical Documentation
 This project provides an end-to-end data analytics solution.
 
-![Solution architecture](/pictures/Group4.drawio.png)
-
-
 Data is saved in the Google Cloud Platform and a Windows Client virtual machine is used to execute scripts.
 This solution uses a medallion architecture pattern. Bronze and silver tier storage is in a GCP cloud storage bucket called `data-cycle-lake` and gold tier storage is in a data warehouse in GCP BigQuery called `DataCycle_Warehouse`.
 
