@@ -8,8 +8,6 @@ The workflow is orchestrated by a GCP Cloud Workflow, which runs the `dailyworkf
 
 ![Solution architecture](/pictures/ArchitectureDataCycle.drawio.png)
 
-![Solution architecture](/pictures/StarSchemaDataCycle.drawio.png)
-
 
 
 # Bronze tier
@@ -74,6 +72,7 @@ The scripts for the silver tier are:
 
 The scripts all use a service account to perform operations. We used the environment variable `SERVICE_ACCOUNT_KEY` link to the .json authentication file for the service account in GCP.
 
+## ETL
 Pandas is used to extract the data from the bronze tier and load it into dataframes.
 We run the cleaning operations on the dataframes, delete pre-existing data in order to avoid duplicates, then convert the final clean dataframe into a parquet file for more efficient storage usage. data from days is partitioned into the silver tier using *hive partitioning*. Each day's data is written in a separate folder that is named according to the structure `date=yyyy-mm-dd" in its month folder.
 
@@ -109,6 +108,8 @@ Our warehouse is organised into a galaxy schema with the following tables
 - Prediction_FactTable
 - Rooms_FactTable
 - Weather_FactTable
+
+![Solution architecture](/pictures/StarSchemaDataCycle.drawio.png)
 
 BigQuery doesn't support incremental random integers, so for IDs we use UUID strings (which it can generate)
 
