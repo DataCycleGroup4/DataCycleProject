@@ -1,17 +1,20 @@
+import os
 import paramiko
 from google.cloud import storage
-import os
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 # --- SFTP Config ---
-SFTP_HOST = "10.130.25.152"
-SFTP_USER = "Student"
-SFTP_PASS = "3uw.AQ!SWxsDBm2zi3"
+SFTP_HOST = os.environ["SFTP_HOST"]
+SFTP_USER = os.environ["SFTP_USER"]
+SFTP_PASS = os.environ["SFTP_PASS"]
 SOURCE_FOLDERS = ["/Meteo/"]
 
 # --- GCS Config ---
-BUCKET_NAME = "data-cycle-lake"
-BASE_PREFIX = "raw/weather/" # Matches your screenshot
-SERVICE_ACCOUNT_JSON = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
+BUCKET_NAME        = os.environ["GCS_BUCKET"]
+BASE_PREFIX        = "raw/weather/"
+SERVICE_ACCOUNT_JSON = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
 
 def sync_sftp_to_lake():
     gcs_client = storage.Client.from_service_account_json(SERVICE_ACCOUNT_JSON)

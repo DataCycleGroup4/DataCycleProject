@@ -1,4 +1,7 @@
-Get-ChildItem "X:\*.xls" | ForEach-Object {
+$drive  = if ($env:SMB_BOOKING_DRIVE) { $env:SMB_BOOKING_DRIVE } else { "X" }
+$bucket = if ($env:GCS_BUCKET)        { $env:GCS_BUCKET }        else { throw "GCS_BUCKET env var is not set" }
+
+Get-ChildItem "${drive}:\*.xls" | ForEach-Object {
 
 	$name = $_.Name
 	$month = $null
@@ -7,8 +10,7 @@ Get-ChildItem "X:\*.xls" | ForEach-Object {
 		$month = $matches[1]
 	}
 
-
-	$dest = "gs://data-cycle-lake/raw/bellevuebooking/xls/${month}/"
+	$dest = "gs://$bucket/raw/bellevuebooking/xls/${month}/"
 
 	Write-Host "Uploading $($_.Name) to destination: $dest"
 	try {
@@ -19,5 +21,3 @@ Get-ChildItem "X:\*.xls" | ForEach-Object {
     		Write-Error $errorMessage
 	}
 }
-
-	

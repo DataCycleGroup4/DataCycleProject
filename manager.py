@@ -1,15 +1,16 @@
 import os
 import subprocess
 import requests
+from dotenv import load_dotenv
 from google.cloud import pubsub_v1
-from google.oauth2 import service_account  # NEW IMPORT
-import google.auth.transport.requests      # NEW IMPORT
+from google.oauth2 import service_account
+import google.auth.transport.requests
 
-# Settings
-ROOT_DIR = r"C:\Users\Administrator\Desktop\DataCycleProject" 
-PROJECT_ID = "project-d31bc18d-8d9f-48db-a77"
-# PATH TO YOUR JSON KEY
-KEY_PATH = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
+load_dotenv()
+
+ROOT_DIR   = os.environ["ROOT_DIR"]
+PROJECT_ID = os.environ["GCP_PROJECT"]
+KEY_PATH   = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
 
 subscriber = pubsub_v1.SubscriberClient()
 subscription_path = subscriber.subscription_path(PROJECT_ID, "vm-sub")

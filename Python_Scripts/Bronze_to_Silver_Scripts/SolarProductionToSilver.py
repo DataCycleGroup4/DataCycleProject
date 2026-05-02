@@ -1,10 +1,13 @@
-import pandas as pd
 import os
+import pandas as pd
 import gcsfs
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 # 1. Configuration
-SERVICE_ACCOUNT_KEY = r"C:\Users\Administrator\Desktop\Auth\project-d31bc18d-8d9f-48db-a77-aae985e54ca0.json"
-BUCKET = "data-cycle-lake"
+SERVICE_ACCOUNT_KEY = os.environ["GOOGLE_APPLICATION_CREDENTIALS"]
+BUCKET = os.environ["GCS_BUCKET"]
 BRONZE_BASE = f"gs://{BUCKET}/raw/solarlogs/production"
 SILVER_BASE = f"gs://{BUCKET}/processed/cleansolarlogs/cleanproduction"
 
