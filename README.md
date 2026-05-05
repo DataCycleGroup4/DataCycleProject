@@ -13,3 +13,6 @@ You can find detailed documentation in `documentation`
 - `scalability.md` is our assessment on how scalable this system would be in the upcoming months/years
 - `gdpr_compliance.md` is our assessment on how our solution conforms to GDPR
 - `user_guide.md` explains the data we store and how to use the dashboards
+
+This project was managed in Jira:
+https://datacycleproject.atlassian.net/jira/software/projects/BDCP/summary

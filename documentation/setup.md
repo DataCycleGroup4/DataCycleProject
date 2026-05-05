@@ -37,7 +37,7 @@ All you need to do now is open Windows Task Scheduler, and create a basic task t
 Here's a list of all cloud resources you're going to need to set up.
 1. A cloud storage bucket
 2. A BigQuery dataset
-3. A Sub/pub
+3. A Pub/Sub Topic & Subscription
 4. A Cloud Workflow
 5. A service account
 
