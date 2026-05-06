@@ -81,7 +81,7 @@ Dashboards display data **as of the last scheduled refresh** (see [Section 7](#7
 
 ## 4. Dashboards — Director
 
-Directors have access to two strategic dashboards that provide a high-level picture of campus energy flows and room utilisation.
+Directors have access to all strategic dashboards that provide a high-level picture of campus energy flows and room utilisation.
 
 ---
 
@@ -187,8 +187,6 @@ Technicians have access to two operational dashboards focused on equipment perfo
 
 - **Fault investigation:** Apply the **Error type** filter to display only intervals with active faults. Cross-reference with the **time of day** and **inverter** filters to identify whether a fault is isolated to one unit or systemic.
 - **Performance comparison:** Selecting two inverters side-by-side using the **Inverter** filter reveals if one unit is underperforming relative to its peers under identical conditions.
-- **String-level diagnosis:** Compare **PDC1 vs. PDC2** for a single inverter to detect shading, soiling, or cabling issues on a specific string.
-- **Temperature monitoring:** High inverter temperatures (typically > 60–65°C) can trigger de-rating or shutdown. Monitor the **Inverter Temperature** trend to plan cleaning or ventilation maintenance.
 
 > **Tip:** A `Daysum` value that stops increasing mid-afternoon while other inverters continue rising is a strong indicator of a fault or shutdown event on that unit.
 
@@ -222,8 +220,6 @@ Technicians have access to two operational dashboards focused on equipment perfo
 - **Daily performance check:** Compare the **Actual vs. Predicted Production** curves. A consistent shortfall against the forecast on a clear day may indicate a soiled panel surface or underperforming inverter.
 - **Consumption anomalies:** A significant deviation between actual and predicted consumption can signal unusual equipment usage, HVAC issues, or data quality problems worth investigating.
 - **Weather correlation:** Use the **Weather conditions** visuals alongside production data to contextualise deviations — lower-than-predicted output is expected on overcast days; it is only a concern when weather does not explain the gap.
-- **Planning shutdowns:** Predictions for upcoming days allow maintenance scheduling on low-production days (cloudy forecasts) to minimise energy loss during planned downtime.
-
 > **Note:** Predictions are generated daily by the KNIME workflow. The solar production model trains on a **7-day rolling window**; the consumption model trains on data from **January 2023 to the present**. Prediction accuracy will naturally be lower during periods with no historical precedent (e.g., first operation after a long shutdown).
 
 ---
