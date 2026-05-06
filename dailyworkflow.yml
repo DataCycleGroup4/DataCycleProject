@@ -57,7 +57,7 @@ main:
     - load_dim_time_with_next_two_days:
         call: publish_and_wait
         args:
-            path: "gold-layer-etl/load_dim_time_with_next_two_days.py"
+            path: "gold-layer-etl/load_time_next_2_days.py"
 
     - knime_prediction:
         call: publish_and_wait
