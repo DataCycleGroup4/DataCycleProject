@@ -1,54 +1,86 @@
-# This solution requires:
-- A windows VM
-- A Knime EduHub / BusinessHub account
-- A GCP account
+# DataCycleProject – Deployment Setup Guide
 
-Once you've set up accounts and all the infrastructure you need, you can find the specific info in each respective subsection of this page.
+This guide describes how to deploy the DataCycleProject using the provided `deploy.bat` automation script and configure the associated visualization dashboards.
 
-## Windows VM
+---
 
-Your VM is going to be performing the majority of the hard work. 
-So, you're going to need to set up the environment for it.
+## 1. Prerequisites
+Before running the deployment script, ensure your **Windows VM** has the following installed:
 
-First install python on your Windows VM. If you want to use a Linux VM instead, check if python is already installed (it usually is). You can download python from here https://www.python.org/downloads/
+* **Python 3.11+**: Must be accessible via the `py` launcher [cite: 2, 16].
+* **Google Cloud SDK**: Includes `gcloud` and `gsutil` command-line tools [cite: 3, 4].
+* **Accounts**:
+    * A Google Cloud Platform (GCP) account.
+    * A KNIME EduHub or BusinessHub account.
+* **Permissions**: Administrative privileges on the VM to register scheduled tasks [cite: 18].
 
-You're going to edit some values in the project. Notepad will be enough, but you can download Notepad++ from here https://notepad-plus-plus.org/downloads/
+## 2. Infrastructure Preparation
 
-Extract the .zip of the solution on the VM.
+### Google Cloud Platform (GCP)
+Set up the following resources in your GCP console:
+1.  **Cloud Storage Bucket**: For data storage.
+2.  **BigQuery Dataset**: For analytics.
+3.  **Pub/Sub Topic & Subscription**: For event-driven processing.
+4.  **Service Account**: Create a service account, generate a **JSON key**, and download it to your VM [cite: 14, 15].
 
-Now, navigate to the root directory of the solution, and create a file called `.env`. This is a hidden file where you will set constant values called *environment variables* read by the different scripts in the solution. These are user-specific, so are not saved to the distributed version of the solution. Here's a list of the variables:
+### KNIME
+1.  Import the `Group4EnergyPredictions.knwf` workflow into your Hub space.
+2.  Deploy the workflow as a **service** to enable API access.
+3.  Note the **App ID**, **Password**, and **Deployment URL** [cite: 7, 11, 12].
 
-NOTE: UPDATE THESE AFTER ALEX HAS SORTED ALL THIS OUT
+Before running the next step, run the command `Install-Module -Name ImportExcel -Force -Scope CurrentUser` in a Powershell terminal as administrator.
+---
 
-- `HMAC_ACCESS_KEY`
-- `HMAC_SECRET_KEY`
-- `KNIME_ID`
-- `KNIME_PASSWORD`
+## 3. Automated Deployment Steps
 
-If you haven't set up the GCP and Knime environment fully, you won't have all these values yet. Once you've finished setting them up, just come back to the `.env` file and update them.
+1.  **Extract the Solution**: Unzip the project files into a directory on your VM.
+2.  **Initial Run**: Execute `deploy.bat` from the root directory [cite: 1]. The script will create a `.env` file from a template if one does not exist [cite: 6].
+3.  **Configuration**: Open `.env` and fill in the required values, ensuring placeholders are replaced [cite: 6, 8, 9, 10, 11, 12]:
+    * `GCP_PROJECT`: Your GCP project ID.
+    * `GCS_BUCKET`: Your GCS bucket name.
+    * `GOOGLE_APPLICATION_CREDENTIALS`: Path to your service account JSON key.
+    * `ROOT_DIR`: The project's root directory on the VM.
+    * `SFTP_PASS`: Your SFTP password.
+    * `KNIME_ID` & `KNIME_PASSWORD`: Your KNIME credentials.
+    * `KNIME_DEPLOYMENT_URL`: The URL for your deployed service.
+4.  **Finalize Deployment**: Run `deploy.bat` again. The script will:
+    * Install Python dependencies for the root and `gold-layer-etl` modules [cite: 16, 17].
+    * Register a Windows Task Scheduler task named `DataCycleProject-Manager` to run `start_manager.bat` daily at **08:50** [cite: 18, 19].
+    * Perform a GCP credentials smoke test [cite: 20].
 
+---
 
-You're nearly done!
+## 4. Dashboard Setup
 
-All you need to do now is open Windows Task Scheduler, and create a basic task to scheduled to run `manager.py` daily. Finished!
+Once the pipeline has populated your BigQuery dataset, you can set up the visualizations using the provided files.
 
-## GCP
+### Power BI
+Two files are provided in the solution folder:
+* **`.pbit` (Template)**: Recommended for first-time setup. Opening this will prompt you to enter your **GCP Project ID** and **Dataset Name**. It will then build the schema and ask you to authenticate with your Google account.
+* **`.pbix` (Report)**: Use this to view the report with existing layouts. If data does not appear, go to **Transform Data > Data Source Settings** and update the BigQuery connection to point to your project.
 
-Here's a list of all cloud resources you're going to need to set up.
-1. A cloud storage bucket
-2. A BigQuery dataset
-3. A Pub/Sub Topic & Subscription
-4. A Cloud Workflow
-5. A service account
+### SAP Analytics Cloud (SAC)
+SAC uses a transport system rather than a "local file" workflow. To import the dashboard:
+1.  Log in to your **SAC Tenant**.
+2.  Navigate to **Deployment > Import**.
+3.  Select **Upload** and choose the provided **`.tgz`** package.
+4.  Once uploaded, select the package and click **Import**. This will recreate the Story and the required Models.
+5.  **Note**: After importing, you must update the **Data Connection** within SAC to use your specific BigQuery service account credentials.
 
+For this project our user doesn't have the permission to export stories so we can't share the file. These screenshots will contain all the configurations for the different elements in the dashboard:
 
-## Knime
+Dimensions and measures in model:
 
-This solution was developed in an academic environment, where we had access to Knime's EduHub. Private customers can use the BusinessHub.
+![alt text](../pictures/inverter_model.png)
 
-Download Knime on your client from here https://www.knime.com/downloads
+Count of Errors per Inverter 
+![alt text](../pictures/error_code.png)
 
-Log in to your account and create a space, then import the file `Group4EnergyPredictions.knwf` + your GCP auth json file into the space, then deploy it.
+Count of status codes
+![alt text](../pictures/inverter_status.png)
 
-Next, go to your deployed workflow in Knime's Hub (whichever one you're using) and create a version. Select service. This has now deployed your workflow to the Hub which can be reached via an API.
+---
 
+## 5. Maintenance
+* **Manual Start**: Execute `start_manager.bat` to run the pipeline immediately 
+* **GCP Auth**: If the smoke test fails, run `gcloud auth application-default login`
