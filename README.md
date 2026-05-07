@@ -3,12 +3,16 @@
 This project's goal was to create a complete end-to-end data analytics solution for data coming from the HES-SO Bellevue campus in Sierre, Switzerland.
 
 
-Our team decided to use Medallion architecture for this project, with our bronze and silver layer being a bucket in Google Cloud Storage. These scripts are designed to be run on a VM on the school's network and send the data to our bucket after extraction via SMB & SSH.
+Our team decided to use Medallion architecture for this project, with our bronze and silver layer being a bucket in Google Cloud Storage and our gold layer being in BigQuery.
 
-# PS_Scripts
+![Solution architecture](/pictures/Group4.drawio.png)
 
-These files retrieve data from the SMB fileshare on the network the VM is located on and send it to the correct folder in GCP
+You can find detailed documentation in `documentation`
+- `setup.md` contains a full guide on how to set up this solution from scratch
+- `technical_documentation.md` specifies how each step works
+- `scalability.md` is our assessment on how scalable this system would be in the upcoming months/years
+- `gdpr_compliance.md` is our assessment on how our solution conforms to GDPR
+- `user_guide.md` explains the data we store and how to use the dashboards
 
-# Python_Scripts
-
-Currently contains a directory with scripts used to clean bronze layer data and send it to silver layer convert to Parquet + the script to extract raw weather forecast data
+This project was managed in Jira:
+https://datacycleproject.atlassian.net/jira/software/projects/BDCP/summary

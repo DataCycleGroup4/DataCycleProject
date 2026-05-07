@@ -19,11 +19,10 @@ def trigger_knime_prediction():
         return False
 
     # 3. Configuration
-    # Using the exact URL from your successful curl test
-    DEPLOYMENT_URL = (
-        "https://api.edu-hub.knime.com/deployments/rest:6e336bc0-ff6b-4f8a-91da-996781d84209/"
-        "execution?reset=true&timeout=-1"
-    )
+    DEPLOYMENT_URL = os.getenv("KNIME_DEPLOYMENT_URL")
+    if not DEPLOYMENT_URL:
+        print("Error: KNIME_DEPLOYMENT_URL not found in .env file.")
+        return False
     
     headers = {
         'accept': 'application/vnd.mason+json',

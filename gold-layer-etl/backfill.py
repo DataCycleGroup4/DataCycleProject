@@ -1,5 +1,8 @@
 import subprocess, sys, os, time
 from datetime import datetime, timedelta
+from dotenv import load_dotenv, find_dotenv
+
+load_dotenv(find_dotenv())
 
 # --- CONFIGURATION ---
 # Adjust these to your desired backfill range
@@ -26,12 +29,8 @@ main_script = os.path.join(script_dir, "main.py")
 for i, run_date in enumerate(dates, 1):
     print(f"\n[{i}/{len(dates)}] Processing {run_date}...")
     
-    # Set environment variables for the subprocess
+    # RUN_DATE changes each iteration; all other vars come from .env
     os.environ["RUN_DATE"] = run_date
-    os.environ["GCP_PROJECT"] = "project-d31bc18d-8d9f-48db-a77"
-    os.environ["GCS_BUCKET"] = "data-cycle-lake"
-    os.environ["BQ_DATASET"] = "DataCycle_Warehouse"
-    os.environ["BQ_LOCATION"] = "EU"
     
     start = time.time()
     try:

@@ -6,9 +6,12 @@ This solution uses a medallion architecture pattern. Bronze and silver tier stor
 
 The workflow is orchestrated by a GCP Cloud Workflow, which runs the `dailyworkflow.yml`file you can find in the root directory of this repository
 
+![Solution architecture](/pictures/ArchitectureDataCycle.drawio.png)
+
+
 
 # Bronze tier
-This tier involves extracting the raw data via SMB and SSH and storing it in our data lake.
+This tier involves extracting the raw data via SMB and SFTP and storing it in our data lake.
 We have the following data that needs extracting:
 
 - Solar panel production data
@@ -21,24 +24,26 @@ We have the following data that needs extracting:
 We store the CSV and XLS versions of room bookings in bronze tier, but only use CSV later so don't move XLS to silver.
 
 The scripts for bronze tier are:
-- /PS_Scripts/UploadDaily_ToHumidity.ps1 
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `*-Humidity.csv`
-- /PS_Scripts/UploadDaily_ToPowerConsumption.ps1
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `*-Consumption.csv`
-- /PS_Scripts/UploadDaily_ToSolarlogs.ps1
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `*-\d{2}\.(\d{2}).\d{4}.csv` for historical data, and `^min\d{2}(\d{2})\d{2}`for current data
+- `/PS_Scripts/UploadDaily_ToHumidity.ps1 `
+    - Extracts data via SMB from address `\\10.130.25.15` that matches pattern `*-Humidity.csv`
+- `/PS_Scripts/UploadDaily_ToPowerConsumption.ps1`
+    - Extracts data via SMB from address `\\10.130.25.152` that matches pattern `*-Consumption.csv`
+- `/PS_Scripts/UploadDaily_ToSolarlogs.ps1`
+    - Extracts data via SMB from address `\\10.130.25.152` that matches pattern `*-\d{2}\.(\d{2}).\d{4}.csv` for historical data, and `^min\d{2}(\d{2})\d{2}`for current data
 
-- /PS_Scripts/UploadDaily_ToTemperature.ps1
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `*-Temperature.csv`
-- /PS_Scripts/UploadWeekly_ToBooking_CSV.ps1
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `RoomAllocations_\d{4}(\d{2}` but from files that end with .csv
-- /PS_Scripts/UploadWeekly_ToBooking_XLS.ps1
-    - Extracts data via SMB from address \\10.130.25.152 that matches pattern `RoomAllocations_\d{4}(\d{2}` but from files that end with .xls
-- /Python_Scripts/Extract_WeatherForecast.py
+- `/PS_Scripts/UploadDaily_ToTemperature.ps1`
+    - Extracts data via SMB from address `\\10.130.25.152` that matches pattern `*-Temperature.csv`
+- `/PS_Scripts/UploadWeekly_ToBooking_CSV.ps1`
+    - Extracts data via SMB from address `\\10.130.25.152` that matches pattern `RoomAllocations_\d{4}(\d{2}` but from files that end with .csv
+    - Personal data, so the columns *Professeur* and *Nom de l'Utilisateur*, is anonymised (value of row at this column replaced with **ANONYMIZED**)
+- `/PS_Scripts/UploadWeekly_ToBooking_XLS.ps1`
+    - Extracts data via SMB from address `\\10.130.25.152` that matches pattern `RoomAllocations_\d{4}(\d{2}` but from files that end with .xls
+    - Personal data, so the columns *Professeur* and *Nom de l'Utilisateur*, is anonymised (value of row at this column replaced with **ANONYMIZED**)
+- `/Python_Scripts/Extract_WeatherForecast.py`
     - Uses the following variables to extract the data via SFTP
         - `SFTP_HOST = "10.130.25.152"`
-        - `SFTP_USER = "Student"`
-        - `SFTP_PASS = "3uw.AQ!SWxsDBm2zi3"`
+        - `SFTP_USER = ""`
+        - `SFTP_PASS = ""` nuh uh, no secrets
         - `SOURCE_FOLDERS = ["/Meteo/"]`
 
 Data is saved in the `data-cycle-lake/raw` in the subdirectories
@@ -69,8 +74,11 @@ The scripts for the silver tier are:
 
 The scripts all use a service account to perform operations. We used the environment variable `SERVICE_ACCOUNT_KEY` link to the .json authentication file for the service account in GCP.
 
+## ETL
 Pandas is used to extract the data from the bronze tier and load it into dataframes.
-We run the cleaning operations on the dataframes, delete pre-existing data in order to avoid duplicates, then convert the final clean dataframe into a parquet file for more efficient storage usage. data from days is partitioned into the silver tier using *hive partitioning*. Each day's data is written in a separate folder that is named according to the structure `date=yyyy-mm-dd" in its month folder.
+We run the cleaning operations on the dataframes, delete pre-existing data in order to avoid duplicates, then convert the final clean dataframe into a parquet file for more efficient storage usage. In the raw data, columns are in French. In the silver layer, we translate these column values into English. All scripts in our pipeline include error handling, and logs from the execution can be found in the `listenerlog.txt` file. Failed steps in a workflow execution can be viewed from the Workflows page in GCP.
+
+Data from days is partitioned into the silver tier using *hive partitioning*. Each day's data is written in a separate folder that is named according to the structure `date=yyyy-mm-dd" in its month folder.
 
 A final filepath looks like `data-cycle-lake/processed/cleansolarlogs/cleanproduction/02/date=2023-02-20/xyz.parquet`
 
@@ -89,7 +97,7 @@ Data is saved in the `data-cycle-lake/processed` in the subdirectories
 
 In the gold tier we move our data from parquet files in the bucket to structured tables in a data warehouse in BigQuery.
 
-Our warehouse is organised into a galaxy schema with the following tables
+Our warehouse is organised into a galaxy schema with the following tables:
 
 ### Dimensions
 - DimTime
@@ -104,6 +112,10 @@ Our warehouse is organised into a galaxy schema with the following tables
 - Prediction_FactTable
 - Rooms_FactTable
 - Weather_FactTable
+
+Here's a diagram depicting the galaxy schema:
+
+![Solution architecture](/pictures/StarSchemaDataCycle.drawio.png)
 
 BigQuery doesn't support incremental random integers, so for IDs we use UUID strings (which it can generate)
 
@@ -120,6 +132,7 @@ For this tier we have multiple files, all found in `/gold-layer-etl`
 - `main.py` main file which orchestrates the process, calling the necessary functions for a given date
 - `config.py` contains all paths needed, the run date, and the tables
 - `backfill.py`runs main.py for a date range (used to fill the data warehouse if it's empty)
+- `load_time_next_2_days` a modified version of `backfill.py` used to load the data for the next 2 days into DimTime, which will be used for our ML prediction
 
 
 # Orchestration
@@ -130,8 +143,85 @@ In order for the workflow to able to execute the tasks on the Windows VM, the VM
 
 # Knime
 
+This solution includes a Knime workflow that reads data from the `data-cycle-lake` bucket in GCP, and predicts the next day's consumption & production data with Random Forest models.
+![Knime workflow](/pictures/Workflow.png)
+
+## Explanation
+The workflow begins by connecting to our GCP service account via credentials generated and stored in a .json file saved in the same private space as the workflow. We then connect to our storage bucket, from which the flow moves into 5 parallel loops to read:
+- Booking data
+- Solar production data
+- Weather forecast data
+- Energy consumption data
+
+Weather data is read twice in parallel within 2 different date ranges.
+
+When the file runs, it dynamically generates multiple dates:
+- Today's date (at run-time)
+- Tomorrow's Date
+- The date 1 week before today
+
+These dates are used as flow variables for row filters to limit our loaded data. The models for predicting solar production data are trained on the data of the past 7 days, and the model for consumption is trained on every date starting from January 1st 2023.
+
+Values are aggregated in GroupBy nodes to structure our training data properly, then fed into learner nodes to train the models. Here's the config for each learner:
+
+
+Once the models are trained, the predictions are made and appended to the Prediction_FactTable and the wofklow finishes. 
+
+The workflow is triggered by the script `trigger_knime.py` found in the root directory. The script triggers the deployed version of the workflow in the Knime Edu-Hub cloud via a POST request to the API of the workflow at `https://api.edu-hub.knime.com/api-doc/?url=/deployments/rest:6e336bc0-ff6b-4f8a-91da-996781d84209/open-api#/`.
+
 # PowerBI
 The dashboards in PowerBI import a cached version of the data in the data warehouse, allowing for the data to be used.
 
+Our PowerBI Dashboard consists of 4 different pages:
+- `Home`
+    - Landing page, lets users quickly see total CHF consumption and production, average humidity and temperature, average % of rooms booked, and total consumption and production. These are all filterable by day and month.
+
+    ![Home page](/pictures/home_dash.png)
+
+- `Solar Production`
+    - This page consists of 2 charts:
+        1. Production (kW), Daily Average Temp and Daily Average Humidity by Date
+        2. Predicted Daily Production (kW) and Producrtion (kW) by Date
+    - Data can be filtered by day, month, and inverter.
+    - Prediction chart includes a small adjacent card that calculates Forecast accuracy % and MAE when filtering by month and day
+
+    ![Solar Production page](/pictures/solar_dash.png)
+
+- `Energy`
+    - This page also consists of 2 charts:
+        1. Consumption (kW), Production(kW), CHF Consumption and CHF Production by Date
+        2. Predicted Consumption (kW) and Consumption (kW) by Date
+    - Data can be filtered by day, month
+    - Prediction chart includes a small adjacent card that calculates Forecast accuracy % and MAE when filtering by month and day
+
+    ![Energy page](/pictures/energy_dash.png)
+
+- `Rooms`
+    - This page consists of 1 chart, a table which shows the occupancy of each room in the Bellevue campus by date. Conditional formatting has been added to create a heatmap to allow for quick visibility of which rooms are in heavy use.
+    - Data can be filtered by day, month, and by the room.
+
+    ![Rooms page](/pictures/rooms_dash.png)
+
+
+
+You can find more detailed documentation for this in `user_guide.md`
+
 # SAC
-Due to account permission constraints, we are only able to load data into SAC manually. This is done via CSV files.
+Due to account permission constraints, we are only able to load data into SAC manually. This is done via CSV files generated by the script `SQL_Scripts/sac_data_to_csv.sql`
+
+This dashboard visualises how many times each inverter has the status of "Error", "OK/Standby" and "Running". Additionally, it has a chart that visualises how many times each inverter has encountered a specific error.
+
+Data can be filtered by day, month, and inverter. 
+
+![Inverter page](/pictures/inverter_dash.png)
+
+
+You can find more detailed documentation for this in user_guide.md
+
+# Security
+
+The versions of SMB and SFTP used, combined with GCP's encryption means our data is encrypted in transit and at rest. Permissions to view data are controlled by in the IAM console in GCP, meaning any unauthorised user is unable to view stored data. Additionally, our PowerBI Dashboards implement row level security via 2 roles.
+
+*Directors* are able to view all dashboards, but only for their school (in this instance the Bellevue campus).
+
+*Technicians* are only able to see dashboards & reports related to solar production data.

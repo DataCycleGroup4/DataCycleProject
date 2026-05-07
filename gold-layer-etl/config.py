@@ -1,10 +1,13 @@
 import os
 from datetime import datetime, timedelta
+from dotenv import load_dotenv, find_dotenv
 
-PROJECT_ID = os.environ.get("GCP_PROJECT", "project-d31bc18d-8d9f-48db-a77")
-DATASET_ID = os.environ.get("BQ_DATASET", "DataCycle_Warehouse")
-BUCKET_NAME = os.environ.get("GCS_BUCKET", "data-cycle-lake")
-LOCATION = os.environ.get("BQ_LOCATION", "EU")
+load_dotenv(find_dotenv())
+
+PROJECT_ID  = os.environ["GCP_PROJECT"]
+DATASET_ID  = os.environ["BQ_DATASET"]
+BUCKET_NAME = os.environ["GCS_BUCKET"]
+LOCATION    = os.environ.get("BQ_LOCATION", "EU")
 
 # Calculate yesterday's date, then shift back 3 years to match the 2023 data
 yesterday = datetime.utcnow() - timedelta(days=1)
